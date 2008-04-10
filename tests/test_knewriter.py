@@ -83,19 +83,36 @@ class TestPostingLine(unittest.TestCase):
     
     def test_invalid_decimal_transaction_volume(self):
         line = _build_posting_line(transaction_volume=Decimal("43.124"))
-        try:
-            line.to_binary()
-            self.fail("Decimal values with more than two decimal places " + \
-                      "must be rejected!")
-        except ValueError:
-            pass
-        expected_binary = '-4312' + self.posting_line_with_transaction_volume
+        self.assertRaises(ValueError, line.to_binary)
     
     
+    def test_invalid_characters_in_record_line(self):
+        line = _build_posting_line(record_field1='abcödef')
+        self.assertRaises(ValueError, line.to_binary)
+        
+        line = _build_posting_line(record_field2='abcödef')
+        self.assertRaises(ValueError, line.to_binary)
+    
+    
+    def test_umlaut_encoding_in_posting_text(self):
+        umlauts = u"äöüßÄÖÜ!#\"#$%&"
+        line = _build_posting_line(posting_text=umlauts + u'§' + u'€')
+        binary_line = '-11500' + 'a' + '100010000' + '\xbd' + \
+                      'Re526100910' + '\x1c' + '\xbe' + '150102' + \
+                      '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
+                      umlauts.encode("CP437") + '\x15' + '\xfe' + '\x1c' + \
+                      '\xb3' + 'EUR' + '\x1c' + 'y'
+        print repr(binary_line)
+        print repr(line.to_binary())
+        self.assertEqual(binary_line, line.to_binary())
+    
+    
+    def test_invalid_characters_in_posting_text(self):
+        line = _build_posting_line(posting_text='á')
+        self.assertRaises(ValueError, line.to_binary)
     
     # Float
     # Datum vierstellig
-    # Umlaute im Betreff
 
 
 

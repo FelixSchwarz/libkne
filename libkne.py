@@ -5,6 +5,9 @@ from decimal import Decimal
 import math
 import re
 
+import datev_encoding
+datev_encoding.register()
+
 
 def _short_date(date):
     format = "%02d%02d%02d"
@@ -49,6 +52,7 @@ def get_number_of_decimal_places(number_string):
 # ------------------------------------------------------------------------------
 
 
+
 class PostingLine(object):
     def __init__(self):
         self.transaction_volume = None
@@ -67,6 +71,25 @@ class PostingLine(object):
         self.currency_code_transaction_volume = None
         self.base_currency_amount = None
         self.exchange_rate = None
+        
+        char_re = "([^0-9a-zA-Z\$%&*\+-/])"
+        self.record_field_valid_characters = re.compile(char_re)
+    
+    
+    def _assert_only_valid_characters_for_record_field(self, value):
+        match = self.record_field_valid_characters.search(value)
+        if match != None:
+            invalid_char = match.group(1)
+            msg = "Invalid character in record field: " + repr(invalid_char)
+            raise ValueError(msg)
+    
+    
+    def _encode_posting_text(self, value):
+        if not isinstance(value, unicode):
+            # filtering, only allow specified characters
+            value = value.decode("datev_ascii")
+        value = value.encode("datev_ascii")
+        return value
     
     
     def _transaction_volume_to_binary(self):
@@ -97,13 +120,16 @@ class PostingLine(object):
         assert self.offsetting_account != None
         bin_line += 'a' + str(self.offsetting_account)
         assert len(self.record_field1) <= 12
+        self._assert_only_valid_characters_for_record_field(self.record_field1)
         bin_line += '\xbd' + self.record_field1 + '\x1c'
         assert len(self.record_field2) <= 12
+        self._assert_only_valid_characters_for_record_field(self.record_field2)
         bin_line += '\xbe' + self.record_field2 + '\x1c'
         bin_line += 'd' + self._date_to_binary()
         bin_line += 'e' + str(self.account_number)
         assert len(self.posting_text) <= 30
-        bin_line += '\x1e' + self.posting_text + '\x1c'
+        encoded_text = self._encode_posting_text(self.posting_text)
+        bin_line += '\x1e' + encoded_text + '\x1c'
         currency_code = self.currency_code_transaction_volume
         assert len(currency_code) <= 3
         assert currency_code.upper() == currency_code
@@ -117,7 +143,8 @@ class TransactionFile(object):
     def __init__(self, config, version_identifier):
         self.config = config
         self.binary_info = self._get_complete_feed_line()
-        self.binary_info += self._get_versioninfo_for_transaction_data(version_identifier)
+        vid = self._get_versioninfo_for_transaction_data(version_identifier)
+        self.binary_info += vid
         self.lines = []
         
         self.open_for_additions = True

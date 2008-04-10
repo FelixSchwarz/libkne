@@ -47,7 +47,7 @@ def build_posting_line():
     line.record_field2 = "150102"
     line.date = datetime.date(day=1, month=1, year=2008)
     line.account_number = 84000000
-    line.posting_text = "AR mit UST-Automatikkonto"
+    line.posting_text = u"AR mit UST-Automatikkonto ä"
     line.currency_code_transaction_volume = "EUR"
     return line
 
