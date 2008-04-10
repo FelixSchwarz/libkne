@@ -85,7 +85,7 @@ class ControlRecord(object):
         self.data_fp.seek(old_fpos)
         number_of_blocks = int(math.ceil(float(number_of_bytes) / 256))
         assert len(str(number_of_blocks)) <= 5
-        return number_of_bytes
+        return number_of_blocks
 
 
     def to_binary(self, version_identifier):

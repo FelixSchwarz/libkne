@@ -157,17 +157,17 @@ class TestKneWriting(unittest.TestCase):
  
         data_carrier = '001' + '   ' + '1234567' + 'Datev eG ' + ' ' + \
                        '00001' + '00001' + (' ' * 95)
-        control_record = 'V' + ' 00001' + '11' + 'FS' + '1234567' + '00042' + \
-                         '000108' + '000040204' + '290204' + '001' + '    ' + \
+        control_record = 'V' + '00001' + '11' + 'FS' + '1234567' + '00042' + \
+                         '000108' + '0000040204' + '290204' + '001' + '    ' + \
                          '00001' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
                          (' ' * 53)
         self.assertEqual(128, len(control_record))
         expected_binary = data_carrier + control_record
-        print repr(binary_header)
         print repr(expected_binary)
-
-        #self.assertEqual(expected_binary, binary_header)
+        print repr(binary_header)
         self.assertEqual(256, len(binary_header))
+        self.assertEqual(expected_binary, binary_header)
+
         binary_data = self.data_fp.read()
         # length of binary_data
         # contents of header/data
