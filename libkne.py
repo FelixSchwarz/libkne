@@ -1,6 +1,14 @@
 # -*- coding: UTF-8 -*-
 
 import datetime
+import math
+
+
+def _short_date(date):
+    format = "%02d%02d%02d"
+    short_year = int(str(date.year)[2:])
+    return format % (date.day, date.month, short_year)
+
 
 class PostingLine(object):
     def __init__(self):
@@ -54,6 +62,52 @@ class PostingLine(object):
         return bin_line
 
 
+class ControlRecord(object):
+    def __init__(self):
+        self.file_no = 1
+        self.application_number = None
+        self.name_abbreviation = None
+        self.advisor_number = None
+        self.client_number = None
+        self.accounting_number = None
+        self.accounting_year = None
+        self.date_start = None
+        self.date_end = None
+        self.password = None
+        self.prima_nota_page = None
+        self.data_fp = None
+
+    
+    def get_number_of_blocks(self):
+        old_fpos = self.data_fp.tell()
+        self.data_fp.seek(0, 2)
+        number_of_bytes = self.data_fp.tell()
+        self.data_fp.seek(old_fpos)
+        number_of_blocks = int(math.ceil(float(number_of_bytes) / 256))
+        assert len(str(number_of_blocks)) <= 5
+        return number_of_bytes
+
+
+    def to_binary(self, version_identifier):
+        "Return the binary KNE format for the specified data."
+        bin_line = 'V' + ("%05d" % self.file_no)
+        bin_line += self.application_number
+        bin_line += self.name_abbreviation
+        bin_line += self.advisor_number
+        bin_line += self.client_number
+        bin_line += self.accounting_number + str(self.accounting_year)[2:]
+        bin_line += '0000' + _short_date(self.date_start)
+        bin_line += _short_date(self.date_end)
+        bin_line += self.prima_nota_page
+        bin_line += self.password
+        bin_line += "%05d" % self.get_number_of_blocks()
+        bin_line += self.prima_nota_page
+        bin_line += ' ' + '1'
+        bin_line += version_identifier + '    '
+        bin_line += ' ' * 53
+        assert len(bin_line) == 128
+        return bin_line
+
 
 product_abbreviation = "lkne"
 
@@ -73,6 +127,7 @@ class KneWriter(object):
         self.posting_fp_feed_written = False
         self.posting_fp_version_info_written = False
         
+        self.control_records = []
         self.config = self._build_config(config)
     
     
@@ -148,15 +203,29 @@ class KneWriter(object):
         bin_line += ' '
         bin_line += "%05d" % self.number_data_files
         bin_line += "%05d" % self.number_data_files
-        bin_line += ' '
+        bin_line += (' ' * 95)
         self.header_fp.write(bin_line)
         
     
+    def add_control_record(self, data_fp=None):
+        cr = ControlRecord()
+        cr.application_number = self.config["application_number"]
+        cr.name_abbreviation = self.config["name_abbreviation"]
+        cr.advisor_number = self.config["advisor_number"]
+        cr.client_number = self.config["client_number"]
+        cr.accounting_number = self.config["accounting_number"]
+        cr.accounting_year = self.config["accounting_year"]
+        cr.date_start = self.config["date_start"]
+        cr.date_end = self.config["date_end"]
+        cr.prima_nota_page = self.config["prima_nota_page"]
+        cr.password = self.config["password"]
+        cr.data_fp = data_fp
+        self.control_records.append(cr)
+    
     
     def _short_date(self, date):
-        format = "%02d%02d%02d"
-        short_year = int(str(date.year)[2:])
-        return format % (date.day, date.month, short_year)
+        # TODO: add deprecation warning
+        return _short_date(date)
     
     
     def write_complete_feed_line(self, posting_fp_created=False):
@@ -182,6 +251,7 @@ class KneWriter(object):
         bin_line += self.config["input_info"]
         bin_line += 'y'
         #assert len(bin_line) == 80
+        self.add_control_record(data_fp=self.posting_fp)
         self.posting_fp.write(bin_line)
     
     
@@ -192,17 +262,23 @@ class KneWriter(object):
             self.write_complete_feed_line(posting_fp_created=True)
     
     
+    def get_version_identifier(self):
+        bin_versionid = '1,'
+        bin_versionid += str(self.config["gl_account_no_length_data"])
+        bin_versionid += ','
+        bin_versionid += str(self.config["gl_account_no_length_coredata"])
+        bin_versionid += ','
+        assert len(product_abbreviation) == 4
+        assert str(product_abbreviation) == product_abbreviation
+        bin_versionid += str(product_abbreviation)
+        return bin_versionid
+    
+    
     def write_versioninfo_for_transaction_data(self):
         assert not self.posting_fp_version_info_written
         self.check_posting_fp()
-        bin_versioninfo = '\xb5' + '1,'
-        bin_versioninfo += str(self.config["gl_account_no_length_data"])
-        bin_versioninfo += ','
-        bin_versioninfo += str(self.config["gl_account_no_length_coredata"])
-        bin_versioninfo += ','
-        assert len(product_abbreviation) == 4
-        assert str(product_abbreviation) == product_abbreviation
-        bin_versioninfo += str(product_abbreviation)
+        bin_versioninfo = '\xb5'
+        bin_versioninfo += self.get_version_identifier()
         bin_versioninfo += '\x1c' + 'y'
         assert len(bin_versioninfo) == 13
         self.posting_fp.write(bin_versioninfo)
@@ -214,6 +290,14 @@ class KneWriter(object):
         bin_posting_line = line.to_binary()
         self.posting_fp.write(bin_posting_line)
     
+    
+    def finish(self):
+        """Write all data to the given file-like objects and generate the header
+        file contents."""
+        self.write_data_carrier_header()
+        version_identifier = self.get_version_identifier()
+        for cr in self.control_records:
+            self.header_fp.write(cr.to_binary(version_identifier))
     
 
 
@@ -242,6 +326,8 @@ Sachkonto                     general ledger account
 Skonto                        cash discount
 Stammdaten                    master data
 Umsatz (einer Buchung)        transaction volume
+Versionskennung               version identifier
+Verwaltungssatz               control record
 Vollvorlauf                   complete feed line
 Währungskennzeichen           Währungskennzeichen
 Währungskurs                  exchange rate

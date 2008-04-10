@@ -33,6 +33,19 @@ def _build_kne_writer(config=None, header_fp=None):
     return (writer, data_fp)
 
 
+def _build_posting_line():
+    line = PostingLine()
+    line.transaction_volume = -115
+    line.offsetting_account = 100010000
+    line.record_field1 = "Re526100910"
+    line.record_field2 = "150102"
+    line.date = datetime.date(day=1, month=1, year=2008)
+    line.account_number = 84000000
+    line.posting_text = "AR mit UST-Automatikkonto"
+    line.currency_code_transaction_volume = "EUR"
+    return line
+
+
 class TestKneDataCarrierHeader(unittest.TestCase):
     def test_write_header(self):
         header_fp = StringIO.StringIO()
@@ -45,7 +58,7 @@ class TestKneDataCarrierHeader(unittest.TestCase):
         header_fp.seek(0)
         written_data = header_fp.read()
         binary_data = '001' + '   ' + '0028167' + 'Datev eG ' + ' ' + \
-                      '00001' + '00001' + ' '
+                      '00001' + '00001' + (' ' * 95)
         self.assertEqual(binary_data, written_data)
         
 
@@ -106,18 +119,11 @@ class TestKneVersionString(unittest.TestCase):
             self.fail("Only a single version info header must be written!")
 
 
+
+
 class TestPostingLine(unittest.TestCase):
     def test_to_binary_negative_transaction_volume(self):
-        line = PostingLine()
-        line.transaction_volume = -115
-        line.offsetting_account = 100010000
-        line.record_field1 = "Re526100910"
-        line.record_field2 = "150102"
-        line.date = datetime.date(day=1, month=1, year=2008)
-        line.account_number = 84000000
-        line.posting_text = "AR mit UST-Automatikkonto"
-        line.currency_code_transaction_volume = "EUR"
-        
+        line = _build_posting_line()
         expected_binary = '-11500' + 'a' + '100010000' + '\xbd' + \
                           'Re526100910' + '\x1c' + '\xbe' + '150102' + \
                           '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
@@ -133,3 +139,37 @@ class TestPostingLine(unittest.TestCase):
     # Datum vierstellig
     # Umlaute im Betreff
 
+
+class TestKneWriting(unittest.TestCase):
+    def setUp(self):
+        self.header_fp = StringIO.StringIO()
+        self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
+        
+    def test_finish(self):
+        line = _build_posting_line()
+        #writer.write_data_carrier_header()
+        self.writer.add_posting_line(line)
+        self.writer.finish()
+        
+        self.header_fp.seek(0)
+        self.data_fp.seek(0)
+        binary_header = self.header_fp.read()
+ 
+        data_carrier = '001' + '   ' + '1234567' + 'Datev eG ' + ' ' + \
+                       '00001' + '00001' + (' ' * 95)
+        control_record = 'V' + ' 00001' + '11' + 'FS' + '1234567' + '00042' + \
+                         '000108' + '000040204' + '290204' + '001' + '    ' + \
+                         '00001' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
+                         (' ' * 53)
+        self.assertEqual(128, len(control_record))
+        expected_binary = data_carrier + control_record
+        print repr(binary_header)
+        print repr(expected_binary)
+
+        #self.assertEqual(expected_binary, binary_header)
+        self.assertEqual(256, len(binary_header))
+        binary_data = self.data_fp.read()
+        # length of binary_data
+        # contents of header/data
+
+    
