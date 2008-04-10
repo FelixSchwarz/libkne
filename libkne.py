@@ -67,7 +67,7 @@ class KneWriter(object):
         (transaction data or master data)."""
         self.header_fp = header_fp
         self.data_fp_builder = data_fp_builder
-        self.number_data_files = -1
+        self.number_data_files = 0
         
         self.posting_fp = None
         self.posting_fp_feed_written = False
@@ -89,6 +89,10 @@ class KneWriter(object):
         assert gl_account_no_length_data in range(4,9)
         assert gl_account_no_length_coredata in range(4,9)
         assert not (gl_account_no_length_data < gl_account_no_length_coredata)
+        
+        if config.get('advisor_name') != None:
+            config['advisor_name'] = "% -9s" % config['advisor_name']
+            assert len(config['advisor_name']) == 9
         
         assert int(config["advisor_number"]) > 0
         assert len(str(config["advisor_number"])) in range(1,8)
@@ -136,8 +140,17 @@ class KneWriter(object):
         return config
     
     
-    def write_kne_header(self):
-        pass
+    def write_data_carrier_header(self):
+        bin_line = "%03d" % self.config["data_carrier_number"]
+        bin_line += '   '
+        bin_line += self.config["advisor_number"]
+        bin_line += self.config['advisor_name']
+        bin_line += ' '
+        bin_line += "%05d" % self.number_data_files
+        bin_line += "%05d" % self.number_data_files
+        bin_line += ' '
+        self.header_fp.write(bin_line)
+        
     
     
     def _short_date(self, date):

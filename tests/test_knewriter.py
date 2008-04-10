@@ -11,6 +11,7 @@ from libkne import KneWriter, PostingLine
 def _default_config():
     config = {}
     config["advisor_number"] = 1234567
+    config["advisor_name"] = 'Datev eG'
     config["client_number"] = 42
     
     config["data_carrier_number"] = 1
@@ -20,15 +21,33 @@ def _default_config():
     return config
 
 
-def _build_kne_writer(config=None):
+def _build_kne_writer(config=None, header_fp=None):
     if config == None:
         config = _default_config()
     data_fp = StringIO.StringIO()
     data_fp_builder = lambda x: data_fp
-    h_buffer = StringIO.StringIO()
-    writer = KneWriter(header_fp=h_buffer, data_fp_builder=data_fp_builder,
+    if header_fp == None:
+        header_fp = StringIO.StringIO()
+    writer = KneWriter(header_fp=header_fp, data_fp_builder=data_fp_builder,
                        config=config)
     return (writer, data_fp)
+
+
+class TestKneDataCarrierHeader(unittest.TestCase):
+    def test_write_header(self):
+        header_fp = StringIO.StringIO()
+        config = _default_config()
+        config["advisor_number"] = 28167
+        self.writer, self.data_fp = _build_kne_writer(config=config, 
+                                                      header_fp=header_fp)
+        self.writer.number_data_files = 1
+        self.writer.write_data_carrier_header()
+        header_fp.seek(0)
+        written_data = header_fp.read()
+        binary_data = '001' + '   ' + '0028167' + 'Datev eG ' + ' ' + \
+                      '00001' + '00001' + ' '
+        self.assertEqual(binary_data, written_data)
+        
 
 
 class TestKneCompleteFeedLine(unittest.TestCase):
