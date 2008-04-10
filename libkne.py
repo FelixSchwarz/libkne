@@ -1,13 +1,52 @@
 # -*- coding: UTF-8 -*-
 
 import datetime
+from decimal import Decimal
 import math
+import re
 
 
 def _short_date(date):
     format = "%02d%02d%02d"
     short_year = int(str(date.year)[2:])
     return format % (date.day, date.month, short_year)
+
+# ------------------------------------------------------------------------------
+sciformat_regex = re.compile("^(-?\d+(?:\.\d+)?)(?:E(\+\d+))?$")
+def append_zeroes(old_number, dot_index, new_dot_index):
+    numbers_after_dot = len(old_number) - dot_index
+    new_number = old_number[:dot_index] + old_number[(dot_index+1):]
+    if float(old_number) > 0:
+        additional_zeroes = new_dot_index - numbers_after_dot
+    else:
+        additional_zeroes = new_dot_index - numbers_after_dot - 1
+    return new_number + ("0" * additional_zeroes)
+
+
+def format_to_normal(dec):
+    decstr = str(dec.normalize())
+    match = sciformat_regex.match(decstr)
+    assert match != None, decstr
+    number, exponent = match.groups()
+    if exponent == None:
+        return number
+    
+    exponent = int(exponent)
+    assert exponent > 0
+    if "." not in number:
+        return number + ("0" * exponent)
+    dot_index = number.index(".")
+    new_dot_index = dot_index + exponent
+    assert new_dot_index >= len(number)
+    return append_zeroes(number, dot_index, new_dot_index)
+
+
+def get_number_of_decimal_places(number_string):
+    if "." in number_string:
+        dot_index = number_string.index(".")
+        return len(number_string) - dot_index - 1
+    return 0
+# ------------------------------------------------------------------------------
 
 
 class PostingLine(object):
@@ -31,7 +70,18 @@ class PostingLine(object):
     
     
     def _transaction_volume_to_binary(self):
-        bin_volume = '%+d00' % self.transaction_volume
+        value = self.transaction_volume
+        if isinstance(value, (int, long)):
+            bin_volume = '%+d00' % value
+        elif isinstance(value, Decimal):
+            dec_places = get_number_of_decimal_places(str(value))
+            if dec_places > 2:
+                msg = "Loosing precision when cutting '%s' to 2 decimal places!"
+                raise ValueError(msg % str(value))
+            bin_volume = '%+d' % (100 * value)
+        else:
+            msg = "unknown type for transaction volume: " + str(value.__class__)
+            raise ValueError(msg)
         return bin_volume
     
     
