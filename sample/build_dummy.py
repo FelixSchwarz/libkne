@@ -22,14 +22,22 @@ def _default_config():
     return config
 
 
-def build_kne_writer():
+data_files = []
+def build_new_data_fp(number_of_files):
+    global data_files
     data_fp = StringIO.StringIO()
-    data_fp_builder = lambda x: data_fp
+    data_files.append(data_fp)
+    return data_fp
+
+
+def build_kne_writer():
+    data_fp_builder = build_new_data_fp
     header_fp = StringIO.StringIO()
     config = _default_config()
     writer = KneWriter(config=config, header_fp=header_fp, 
                        data_fp_builder=data_fp_builder)
     return writer
+
 
 def build_posting_line():
     line = PostingLine()
@@ -65,6 +73,7 @@ if __name__ == "__main__":
     writer.add_posting_line(line)
     writer.finish()
     
-    _flush_to_disk(writer.header_fp, writer.posting_fp)
+    data_fp = data_files[0]
+    _flush_to_disk(writer.header_fp, data_fp)
     
     

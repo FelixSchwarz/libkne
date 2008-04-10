@@ -27,7 +27,7 @@ class PostingLine(object):
         self.eu_taxrate = None
         self.currency_code_transaction_volume = None
         self.base_currency_amount = None
-        self.exchange_rat = None
+        self.exchange_rate = None
     
     
     def _transaction_volume_to_binary(self):
@@ -62,7 +62,133 @@ class PostingLine(object):
         return bin_line
 
 
+class TransactionFile(object):
+    
+    def __init__(self, config, version_identifier):
+        self.config = config
+        self.binary_info = self._get_complete_feed_line()
+        self.binary_info += self._get_versioninfo_for_transaction_data(version_identifier)
+        self.lines = []
+        
+        self.open_for_additions = True
+        self.number_of_blocks = None
+    
+    
+    def _client_total(self):
+        client_sum_total = 0
+        for line in self.lines:
+            client_sum_total += line.transaction_volume
+        
+        if client_sum_total > 0:
+            bin_total = 'x'
+        else:
+            bin_total = 'w'
+        int_total = abs(int(100 * client_sum_total))
+        
+        bin_total += "%014d" % int_total 
+        bin_total += 'y' + 'z'
+        return bin_total
+    
+    
+    def _get_complete_feed_line(self):
+        start_feed_line = '\x1d'
+        new_feed = '\x18'
+        
+        bin_line = start_feed_line + new_feed
+        bin_line += self.config["version_complete_feed_line"]
+        bin_line += "%03d" % self.config["data_carrier_number"]
+        bin_line += self.config["application_number"]
+        bin_line += self.config["name_abbreviation"]
+        bin_line += self.config["advisor_number"]
+        bin_line += self.config["client_number"]
+        bin_line += self.config["accounting_number"] + str(self.config["accounting_year"])[2:]
+        bin_line += _short_date(self.config["date_start"])
+        bin_line += _short_date(self.config["date_end"])
+        bin_line += self.config["prima_nota_page"]
+        bin_line += self.config["password"]
+        bin_line += self.config["application_info"]
+        bin_line += self.config["input_info"]
+        bin_line += 'y'
+        assert len(bin_line) == 80
+        return bin_line
+    
+    
+    def _get_number_of_blocks(self):
+        number_of_bytes = len(self.binary_info)
+        number_of_blocks = int(math.ceil(float(number_of_bytes) / 256))
+        assert len(str(number_of_blocks)) <= 5
+        return number_of_blocks
+    
+    
+    def _get_versioninfo_for_transaction_data(self, version_identifier):
+        bin_versioninfo = '\xb5'
+        # TODO Sachkontonummern-Laenge ev. separat?
+        bin_versioninfo += version_identifier
+        bin_versioninfo += '\x1c' + 'y'
+        assert len(bin_versioninfo) == 13
+        return bin_versioninfo
+    
+    
+    def append_posting_line(self, line):
+        """Append a new posting line to this transaction file (only if 
+        to_binary() was not called before on this file!). Return True if the 
+        line was appended successfully else False. If False, no 
+        more lines can be appended to this file."""
+        assert self.open_for_additions
+        self.lines.append(line)
+        #self.binary_info += line.to_binary()
+        return True
+    
+    
+    def build_control_record(self):
+        cr = ControlRecord()
+        cr.application_number = self.config["application_number"]
+        cr.name_abbreviation = self.config["name_abbreviation"]
+        cr.advisor_number = self.config["advisor_number"]
+        cr.client_number = self.config["client_number"]
+        cr.accounting_number = self.config["accounting_number"]
+        cr.accounting_year = self.config["accounting_year"]
+        cr.date_start = self.config["date_start"]
+        cr.date_end = self.config["date_end"]
+        cr.prima_nota_page = self.config["prima_nota_page"]
+        cr.password = self.config["password"]
+        
+        cr.number_of_blocks = self.number_of_blocks
+        return cr
+    
+    
+    def _compute_number_of_fill_bytes(self):
+        number_of_bytes = len(self.binary_info)
+        missing_bytes = 256 - (number_of_bytes % 256)
+        return missing_bytes
+    
+    
+    def _add_fill_bytes(self):
+        missing_bytes = self._compute_number_of_fill_bytes()
+        if missing_bytes > 0:
+            self.binary_info += '\x00' * missing_bytes
+    
+    
+    def finish(self):
+        if self.open_for_additions:
+            for line in self.lines:
+                self.binary_info += line.to_binary()
+            self.binary_info += self._client_total()
+            self._add_fill_bytes()
+            self.open_for_additions = False
+        pass
+    
+    
+    def to_binary(self):
+        self.finish()
+        self.number_of_blocks = self._get_number_of_blocks()
+        
+        return self.binary_info
+
+
+
 class ControlRecord(object):
+    "Control record after data carrier header in the control file"
     def __init__(self):
         self.file_no = 1
         self.application_number = None
@@ -76,18 +202,10 @@ class ControlRecord(object):
         self.password = None
         self.prima_nota_page = None
         self.data_fp = None
-
+        
+        self.number_of_blocks = None
     
-    def get_number_of_blocks(self):
-        old_fpos = self.data_fp.tell()
-        self.data_fp.seek(0, 2)
-        number_of_bytes = self.data_fp.tell()
-        self.data_fp.seek(old_fpos)
-        number_of_blocks = int(math.ceil(float(number_of_bytes) / 256))
-        assert len(str(number_of_blocks)) <= 5
-        return number_of_blocks
-
-
+    
     def to_binary(self, version_identifier):
         "Return the binary KNE format for the specified data."
         bin_line = 'V' + ("%05d" % self.file_no)
@@ -100,13 +218,47 @@ class ControlRecord(object):
         bin_line += _short_date(self.date_end)
         bin_line += self.prima_nota_page
         bin_line += self.password
-        bin_line += "%05d" % self.get_number_of_blocks()
+        bin_line += "%05d" % self.number_of_blocks
         bin_line += self.prima_nota_page
         bin_line += ' ' + '1'
         bin_line += version_identifier + '    '
         bin_line += ' ' * 53
         assert len(bin_line) == 128
         return bin_line
+
+
+
+class TransactionManager(object):
+    
+    def __init__(self, config, version_identifier, data_fp_builder):
+        self.config = config
+        self.version_identifier = version_identifier
+        self.data_fp_builder = data_fp_builder
+        
+        self.transaction_files = []
+    
+    
+    def append_posting_line(self, line):
+        if self.transaction_files == []:
+            new_file = TransactionFile(self.config, self.version_identifier)
+            self.transaction_files.append(new_file)
+        tf = self.transaction_files[-1]
+        assert tf.append_posting_line(line)
+    
+    
+    def finish(self):
+        """Write all transaction files using the data_fp_builder. No 
+        transaction data may be appended after calling finish (although 
+        finish() itself may be called multiple times.
+        Return a list of control records. 
+        """
+        control_records = []
+        for i, tf in enumerate(self.transaction_files):
+            data_fp = self.data_fp_builder(i)
+            data_fp.write(tf.to_binary())
+            control_records.append(tf.build_control_record())
+        return control_records
+
 
 
 product_abbreviation = "lkne"
@@ -129,6 +281,10 @@ class KneWriter(object):
         
         self.control_records = []
         self.config = self._build_config(config)
+        
+        version_info = self.get_version_identifier()
+        self.transaction_manager = TransactionManager(self.config, version_info,
+                                                      data_fp_builder)
     
     
     def _build_config(self, cfg):
@@ -195,73 +351,6 @@ class KneWriter(object):
         return config
     
     
-    def write_data_carrier_header(self):
-        bin_line = "%03d" % self.config["data_carrier_number"]
-        bin_line += '   '
-        bin_line += self.config["advisor_number"]
-        bin_line += self.config['advisor_name']
-        bin_line += ' '
-        bin_line += "%05d" % self.number_data_files
-        bin_line += "%05d" % self.number_data_files
-        bin_line += (' ' * 95)
-        self.header_fp.write(bin_line)
-        
-    
-    def add_control_record(self, data_fp=None):
-        cr = ControlRecord()
-        cr.application_number = self.config["application_number"]
-        cr.name_abbreviation = self.config["name_abbreviation"]
-        cr.advisor_number = self.config["advisor_number"]
-        cr.client_number = self.config["client_number"]
-        cr.accounting_number = self.config["accounting_number"]
-        cr.accounting_year = self.config["accounting_year"]
-        cr.date_start = self.config["date_start"]
-        cr.date_end = self.config["date_end"]
-        cr.prima_nota_page = self.config["prima_nota_page"]
-        cr.password = self.config["password"]
-        cr.data_fp = data_fp
-        self.control_records.append(cr)
-    
-    
-    def _short_date(self, date):
-        # TODO: add deprecation warning
-        return _short_date(date)
-    
-    
-    def write_complete_feed_line(self, posting_fp_created=False):
-        if not posting_fp_created:
-            assert self.posting_fp == None
-            self.check_posting_fp()
-        start_feed_line = '\x1d'
-        new_feed = '\x18'
-        
-        bin_line = start_feed_line + new_feed
-        bin_line += self.config["version_complete_feed_line"]
-        bin_line += "%03d" % self.config["data_carrier_number"]
-        bin_line += self.config["application_number"]
-        bin_line += self.config["name_abbreviation"]
-        bin_line += self.config["advisor_number"]
-        bin_line += self.config["client_number"]
-        bin_line += self.config["accounting_number"] + str(self.config["accounting_year"])[2:]
-        bin_line += self._short_date(self.config["date_start"])
-        bin_line += self._short_date(self.config["date_end"])
-        bin_line += self.config["prima_nota_page"]
-        bin_line += self.config["password"]
-        bin_line += self.config["application_info"]
-        bin_line += self.config["input_info"]
-        bin_line += 'y'
-        #assert len(bin_line) == 80
-        self.add_control_record(data_fp=self.posting_fp)
-        self.posting_fp.write(bin_line)
-    
-    
-    def check_posting_fp(self):
-        if self.posting_fp == None:
-            self.number_data_files += 1
-            self.posting_fp = self.data_fp_builder(self.number_data_files)
-            self.write_complete_feed_line(posting_fp_created=True)
-    
-    
     def get_version_identifier(self):
         bin_versionid = '1,'
         bin_versionid += str(self.config["gl_account_no_length_data"])
@@ -274,31 +363,45 @@ class KneWriter(object):
         return bin_versionid
     
     
-    def write_versioninfo_for_transaction_data(self):
-        assert not self.posting_fp_version_info_written
-        self.check_posting_fp()
-        bin_versioninfo = '\xb5'
-        bin_versioninfo += self.get_version_identifier()
-        bin_versioninfo += '\x1c' + 'y'
-        assert len(bin_versioninfo) == 13
-        self.posting_fp.write(bin_versioninfo)
-        self.posting_fp_version_info_written = True
+    def _build_data_carrier_header(self, number_of_files):
+        bin_line = "%03d" % self.config["data_carrier_number"]
+        bin_line += '   '
+        bin_line += self.config["advisor_number"]
+        bin_line += self.config['advisor_name']
+        bin_line += ' '
+        bin_line += "%05d" % number_of_files
+        bin_line += "%05d" % number_of_files
+        bin_line += (' ' * 95)
+        return bin_line
+    
+    
+    def _build_control_record_header(self, control_records):
+        binary = ''
+        version_info = self.get_version_identifier()
+        for cr in control_records:
+            binary += cr.to_binary(version_info)
+        return binary
+    
+    
+    def _build_control_header(self, control_records):
+        number_of_files = len(control_records)
+        binary = self._build_data_carrier_header(number_of_files)
+        binary += self._build_control_record_header(control_records)
+        return binary
     
     
     def add_posting_line(self, line):
-        self.check_posting_fp()
-        bin_posting_line = line.to_binary()
-        self.posting_fp.write(bin_posting_line)
+        self.transaction_manager.append_posting_line(line)
     
     
     def finish(self):
         """Write all data to the given file-like objects and generate the header
         file contents."""
-        self.write_data_carrier_header()
-        version_identifier = self.get_version_identifier()
-        for cr in self.control_records:
-            self.header_fp.write(cr.to_binary(version_identifier))
-    
+        control_records = self.transaction_manager.finish()
+        header_string = self._build_control_header(control_records)
+        self.header_fp.write(header_string)
+
+
 
 
 """
