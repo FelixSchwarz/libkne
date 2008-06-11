@@ -49,15 +49,22 @@ def _build_posting_line(**kwargs):
             setattr(line, key, kwargs[key])
     return line
 
+def _default_binary_posting_line(with_ammount=True):
+    binary_line = ''
+    if with_ammount:
+        binary_line = '-11500'
+    binary_line += 'a' + '100010000' + '\xbd' + \
+                   'Re526100910' + '\x1c' + '\xbe' + '150102' + \
+                   '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
+                   'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
+                   'EUR' + '\x1c' + 'y'
+    return binary_line
+    
 
 class TestPostingLine(unittest.TestCase):
     
     def setUp(self):
-        binary_line = 'a' + '100010000' + '\xbd' + \
-                      'Re526100910' + '\x1c' + '\xbe' + '150102' + \
-                      '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
-                      'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
-                      'EUR' + '\x1c' + 'y'
+        binary_line = _default_binary_posting_line(with_ammount=False)
         self.posting_line_with_transaction_volume = binary_line
     
     
@@ -76,8 +83,8 @@ class TestPostingLine(unittest.TestCase):
     def test_decimal_transaction_volume(self):
         line = _build_posting_line(transaction_volume=Decimal("-43.12"))
         expected_binary = '-4312' + self.posting_line_with_transaction_volume
-        print repr(expected_binary)
-        print repr(line.to_binary())
+        #print repr(expected_binary)
+        #print repr(line.to_binary())
         self.assertEqual(expected_binary, line.to_binary())
     
     
@@ -102,8 +109,8 @@ class TestPostingLine(unittest.TestCase):
                       '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
                       umlauts.encode("CP437") + '\x15' + '\xfe' + '\x1c' + \
                       '\xb3' + 'EUR' + '\x1c' + 'y'
-        print repr(binary_line)
-        print repr(line.to_binary())
+        #print repr(binary_line)
+        #print repr(line.to_binary())
         self.assertEqual(binary_line, line.to_binary())
     
     
@@ -111,83 +118,17 @@ class TestPostingLine(unittest.TestCase):
         line = _build_posting_line(posting_text='á')
         self.assertRaises(ValueError, line.to_binary)
     
-    # Float
-    # Datum vierstellig
-
-
-
-#class TestKneDataCarrierHeader(unittest.TestCase):
-#    def test_write_header(self):
-#        header_fp = StringIO.StringIO()
-#        config = _default_config()
-#        config["advisor_number"] = 28167
-#        self.writer, self.data_fp = _build_kne_writer(config=config, 
-#                                                      header_fp=header_fp)
-#        self.writer.number_data_files = 1
-#        self.writer.write_data_carrier_header()
-#        header_fp.seek(0)
-#        written_data = header_fp.read()
-#        binary_data = '001' + '   ' + '0028167' + 'Datev eG ' + ' ' + \
-#                      '00001' + '00001' + (' ' * 95)
-#        self.assertEqual(binary_data, written_data)
-#        
-#
-
-#class TestKneCompleteFeedLine(unittest.TestCase):
-#    def setUp(self):
-#        config = _default_config()
-#        config.update({"name_abbreviation": "ab", "advisor_number": 28167,
-#                       "client_number": 1, "accounting_year": 2007, 
-#                       "date_start": datetime.date(2007, 1, 1),
-#                       "date_end": datetime.date(2007, 1, 31),
-#                       "application_info": "SELF ID: 99999"})
-#        self.writer, self.data_fp = _build_kne_writer(config=config)
-#    
-#    
-#    def test_write(self):
-#        self.writer.check_posting_fp()
-#        # will call write_complete_feed_line
-#        self.data_fp.seek(0)
-#        written_data = self.data_fp.read()
-#        expected_binstring = '\x1d' + '\x18' + '100111AB002816' + \
-#                             '7000010001070101' + '07310107001' + \
-#                             '    SELF ID: 99999   ' + '               ' + 'y'
-#        print repr(expected_binstring)
-#        print repr(written_data)
-#        self.assertEquals(expected_binstring, written_data)
-#
-
-#class TestKneVersionString(unittest.TestCase):
-#    def setUp(self):
-#        self.writer, self.data_fp = _build_kne_writer()
-#    
-#    
-#    def _get_written_version_info(self):
-#        length_version_info = 13
-#        
-#        current_position = self.data_fp.tell()
-#        assert current_position >= length_version_info
-#        self.data_fp.seek(current_position - length_version_info)
-#        return self.data_fp.read()
-#    
-#    
-#    def test_versionstring(self):
-#        self.writer.write_versioninfo_for_transaction_data()
-#        written_data = self._get_written_version_info()
-#        expected_binstring = '\xb5' + '1,8,8,lkne' + '\x1c' + 'y'
-#        self.assertEquals(expected_binstring, written_data)
-#    
-#    
-#    def test_only_a_single_versioninfo(self):
-#        self.writer.write_versioninfo_for_transaction_data()
-#        try:
-#            self.writer.write_versioninfo_for_transaction_data()
-#        except:
-#            written_data = self._get_written_version_info()
-#            self.assertEquals(13, len(written_data))
-#        else: 
-#            self.fail("Only a single version info header must be written!")
-
+    
+    def test_date(self):
+        line = _build_posting_line(date=datetime.date(2008, 12, 21))
+        binary_line = '-11500' + 'a' + '100010000' + '\xbd' + \
+                      'Re526100910' + '\x1c' + '\xbe' + '150102' + \
+                      '\x1c' + 'd' + '2112' + 'e' + '84000000' + '\x1e' + \
+                      'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
+                      'EUR' + '\x1c' + 'y'
+        #print repr(binary_line)
+        #print repr(line.to_binary())
+        self.assertEqual(binary_line, line.to_binary())
 
 
 
@@ -195,32 +136,83 @@ class TestKneWriting(unittest.TestCase):
     def setUp(self):
         self.header_fp = StringIO.StringIO()
         self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
-        
-    def test_finish(self):
+    
+    
+    def _assemble_data(self):
         line = _build_posting_line()
-        #writer.write_data_carrier_header()
+        self.writer.add_posting_line(line)
         self.writer.add_posting_line(line)
         self.writer.finish()
         
         self.header_fp.seek(0)
         self.data_fp.seek(0)
-        binary_header = self.header_fp.read()
- 
+    
+    
+    def _check_header_file(self, binary_header):
         data_carrier = '001' + '   ' + '1234567' + 'Datev eG ' + ' ' + \
                        '00001' + '00001' + (' ' * 95)
         control_record = 'V' + '00001' + '11' + 'FS' + '1234567' + '00042' + \
                          '000108' + '0000040204' + '290204' + '001' + '    ' + \
-                         '00001' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
+                         '00002' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
                          (' ' * 53)
         self.assertEqual(128, len(control_record))
         expected_binary = data_carrier + control_record
-        print repr(expected_binary)
-        print repr(binary_header)
-        self.assertEqual(256, len(binary_header))
+        self.assertEqual(256, len(expected_binary))
+        
+        #print repr(expected_binary)
+        #print repr(binary_header)
         self.assertEqual(expected_binary, binary_header)
-
-        binary_data = self.data_fp.read()
-        # length of binary_data
-        # contents of header/data
-
     
+    
+    def _check_complete_feed_line(self, binary_data):
+        expected_feed_line = '\x1d' + '\x18' + '1' + '001' + '11' + 'FS' + \
+                             '1234567' + '00042' + '000108' + \
+                             '040204' + '290204' + '001' + '    ' + \
+                             (' ' * 16) + (' ' * 16) + 'y'
+        self.assertEqual(80, len(expected_feed_line))
+        #print repr(expected_feed_line)
+        #print repr(binary_data)
+        self.assertEquals(expected_feed_line, binary_data)
+        
+    
+    def _check_version_string(self, binary_data):
+        expected_version_string = '\xb5' + '1,8,8,lkne' + '\x1c' + 'y'
+        self.assertEqual(13, len(expected_version_string))
+        #print repr(expected_version_string)
+        #print repr(binary_data)
+        self.assertEquals(expected_version_string, binary_data)
+    
+    
+    def _check_posting_line(self, binary_data, start):
+        post_line = _default_binary_posting_line()
+        end = start + len(post_line)
+        binary_line = binary_data[start:end]
+        print repr(post_line)
+        print repr(binary_line)
+        self.assertEqual(post_line, binary_line)
+        return end
+    
+    
+    def _check_for_filling(self, binary_data, start, end):
+        expected_filling = '\0'*(end-start)
+        real_filling = binary_data[start:end]
+        print repr(expected_filling)
+        print repr(real_filling)
+        self.assertEqual(expected_filling, real_filling)
+    
+    def test_finish(self):
+        self._assemble_data()
+        binary_header = self.header_fp.read()
+        self._check_header_file(binary_header)
+ 
+        binary_data = self.data_fp.read()
+        self.assertEqual(0, len(binary_data) % 256)
+        self._check_complete_feed_line(binary_data[:80])
+        self._check_version_string(binary_data[80:93])
+        
+        end = self._check_posting_line(binary_data, 93)
+        self._check_for_filling(binary_data, end, 256)
+        end = self._check_posting_line(binary_data, 256)
+        # TODO: Abschluss der Datendatei!
+        self._check_for_filling(binary_data, end, 256)
+

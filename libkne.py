@@ -237,6 +237,7 @@ class TransactionFile(object):
     def _compute_number_of_fill_bytes(self):
         number_of_bytes = len(self.binary_info)
         missing_bytes = 256 - (number_of_bytes % 256)
+        print 'missing_bytes: ', missing_bytes
         return missing_bytes
     
     
