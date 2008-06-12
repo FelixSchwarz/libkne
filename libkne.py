@@ -213,7 +213,6 @@ class TransactionFile(object):
         more lines can be appended to this file."""
         assert self.open_for_additions
         self.lines.append(line)
-        #self.binary_info += line.to_binary()
         return True
     
     
@@ -237,24 +236,36 @@ class TransactionFile(object):
     def _compute_number_of_fill_bytes(self):
         number_of_bytes = len(self.binary_info)
         missing_bytes = 256 - (number_of_bytes % 256)
-        print 'missing_bytes: ', missing_bytes
         return missing_bytes
     
     
-    def _add_fill_bytes(self):
+    def _add_fill_bytes_at_file_end(self):
         missing_bytes = self._compute_number_of_fill_bytes()
         if missing_bytes > 0:
             self.binary_info += '\x00' * missing_bytes
     
     
+    def _insert_fill_bytes(self, binary_line):
+        number_fill_bytes = 6
+        blocks_used = len(self.binary_info) / 256 + 1
+        end_block_index = blocks_used * 256
+        free_bytes_in_block = end_block_index - number_fill_bytes \
+                                  - len(self.binary_info)
+        if free_bytes_in_block < len(binary_line):
+            binary_line = binary_line[:free_bytes_in_block] + \
+                          ('\x00' * number_fill_bytes) + \
+                          binary_line[free_bytes_in_block:]
+        return binary_line
+    
+    
     def finish(self):
         if self.open_for_additions:
             for line in self.lines:
-                self.binary_info += line.to_binary()
+                binary_line = line.to_binary()
+                self.binary_info += self._insert_fill_bytes(binary_line)
             self.binary_info += self._client_total()
-            self._add_fill_bytes()
+            self._add_fill_bytes_at_file_end()
             self.open_for_additions = False
-        pass
     
     
     def to_binary(self):

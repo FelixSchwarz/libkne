@@ -186,9 +186,18 @@ class TestKneWriting(unittest.TestCase):
     def _check_posting_line(self, binary_data, start):
         post_line = _default_binary_posting_line()
         end = start + len(post_line)
-        binary_line = binary_data[start:end]
-        print repr(post_line)
-        print repr(binary_line)
+        if (start / 256) == (end / 256):
+            binary_line = binary_data[start:end]
+        else: 
+            start_second = (start / 256 + 1) * 256
+            end_first = start_second - 6
+            bytes_in_first_block = end_first - start
+            end = start_second + (len(post_line) - bytes_in_first_block)
+            self._check_for_filling(binary_data, end_first, start_second)
+            binary_line = binary_data[start:end_first] + \
+                binary_data[start_second:end]
+        #print repr(post_line)
+        #print repr(binary_line)
         self.assertEqual(post_line, binary_line)
         return end
     
@@ -196,9 +205,8 @@ class TestKneWriting(unittest.TestCase):
     def _check_for_filling(self, binary_data, start, end):
         expected_filling = '\0'*(end-start)
         real_filling = binary_data[start:end]
-        print repr(expected_filling)
-        print repr(real_filling)
         self.assertEqual(expected_filling, real_filling)
+    
     
     def test_finish(self):
         self._assemble_data()
@@ -211,8 +219,8 @@ class TestKneWriting(unittest.TestCase):
         self._check_version_string(binary_data[80:93])
         
         end = self._check_posting_line(binary_data, 93)
-        self._check_for_filling(binary_data, end, 256)
-        end = self._check_posting_line(binary_data, 256)
+        end = self._check_posting_line(binary_data, end)
+        
         # TODO: Abschluss der Datendatei!
         self._check_for_filling(binary_data, end, 256)
 
