@@ -1,0 +1,10 @@
+
+advisor number          471156
+advisor name            Foo Bar
+client number           42212
+data carrier number     1
+accounting number       1
+
+created by LX-Office (Demo Server) on 15.06.2008
+
+
