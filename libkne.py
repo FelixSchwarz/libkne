@@ -142,16 +142,19 @@ class PostingLine(object):
 
 class TransactionFile(object):
     
-    def __init__(self, config, version_identifier):
+    def __init__(self, config, version_identifier=None):
         self.config = config
-        self.binary_info = self._get_complete_feed_line()
-        vid = self._get_versioninfo_for_transaction_data(version_identifier)
-        self.binary_info += vid
+        self.binary_info = None
+        if version_identifier != None:
+            self.binary_info = self._get_complete_feed_line()
+            vid = self._get_versioninfo_for_transaction_data(version_identifier)
+            self.binary_info += vid
         self.lines = []
+        self.cr = None
         
-        self.open_for_additions = True
+        self.open_for_additions = (self.binary_info != None)
         self.number_of_blocks = None
-    
+        
     
     def _client_total(self):
         client_sum_total = 0
@@ -232,6 +235,7 @@ class TransactionFile(object):
         cr.password = self.config["password"]
         
         cr.number_of_blocks = self.number_of_blocks
+        self.cr = cr
         return cr
     
     
@@ -273,8 +277,16 @@ class TransactionFile(object):
     def to_binary(self):
         self.finish()
         self.number_of_blocks = self._get_number_of_blocks()
-        
         return self.binary_info
+    
+    
+    def from_binary(self, binary_control_record, data_fp):
+        """Takes a binary control record and a file-like object which contains
+        the data and parses them."""
+        cr = ControlRecord()
+        cr.from_binary(binary_control_record)
+        self.cr = cr
+        # TODO: Handle data_fp
 
 
 
@@ -295,6 +307,28 @@ class ControlRecord(object):
         self.data_fp = None
         
         self.number_of_blocks = None
+    
+    
+    def from_binary(self, binary_data):
+        assert len(binary_data) == 128
+        assert binary_data[0] in ['V', '*']
+        self.do_process = (binary_data[0] == 'V')  # TODO
+        self.file_no = int(binary_data[1:6])
+        app_info = int(binary_data[6:8]) # TODO -> 11?
+        name_abbreviation = binary_data[8:10]
+        advisor_number = int(binary_data[10:17])
+        print advisor_number
+        client_number = int(binary_data[17:22])
+        print client_number
+        accounting_number = int(binary_data[22:28])
+        date_from = int(binary_data[28:38])
+        print date_from
+        date_to = int(binary_data[38:44])
+        print date_to
+        prima_nota_page = int(binary_data[44:47])
+        password = binary_data[47:51]
+        print repr(password)
+        
     
     
     def to_binary(self, version_identifier):
@@ -510,8 +544,10 @@ class KneReader(object):
         assert self.config["number_last_data_file"] == number_data_files
         assert len(data_fps) == int(len(data_meta_information) / 128)
         meta_info_list = self._split_meta_info_for_data(data_meta_information)
+        self.files = []
         for metainfo, data_fp in zip(meta_info_list, data_fps):
-            data_file = self._parse_data_file(metainfo, data_fp)
+            transaction_file = self._parse_data_file(metainfo, data_fp)
+            self.files.append(transaction_file)
     
     
     def _parse_data_carrier_header(self, header_fp):
@@ -534,16 +570,22 @@ class KneReader(object):
         meta_info_list = []
         for i in range(number_of_blocks):
             data = data_meta_information[(i * 128):((i + 1) * 128)]
-            meta_info_list.append(meta_info_list)
+            meta_info_list.append(data)
         return meta_info_list
     
     
-    def _parse_data_file(self, metainfo, data_fp):
-        pass
+    def _parse_data_file(self, binary_control_record, data_fp):
+        tf = TransactionFile(self.config)
+        tf.from_binary(binary_control_record, data_fp)
+        return tf
     
     
     def get_config(self):
         return self.config
+    
+    
+    def get_file(self, index):
+        return self.files[index]
 
 
 

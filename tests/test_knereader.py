@@ -36,7 +36,14 @@ class TestKneReaderLxOffice(unittest.TestCase):
     
     
     def test_read_posting_lines(self):
-        pass
+        tfile = self.reader.get_file(0)
+        cr = tfile.cr # TODO
+        self.assertEqual(True, cr.do_process) # TODO: MEthode von tfile!
+        self.assertEqual(1, cr.file_no)     # TODO: MEthode von tfile!
+        
+        
+        
+        
         #self.assertEqual(1, config["accounting_number"])
         
         #self.assertEqual(date(2008, 05, 01), config["date_start"])
