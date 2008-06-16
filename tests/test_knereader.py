@@ -54,6 +54,9 @@ class TestKneReaderLxOffice(unittest.TestCase):
         self.assertEqual('1,4,4,SELF', meta['version_info'])
     
     
-    
+    def test_read_posting_line(self):
+        tfile = self.reader.get_file(0)
+        lines = tfile.get_posting_lines()
+        self.assertEqual(1, len(lines))
     # Check the posting lines
 
