@@ -140,6 +140,131 @@ class PostingLine(object):
 
 
 
+class ControlRecord(object):
+    "Control record after data carrier header in the control file"
+    def __init__(self):
+        self.file_no = 1
+        self.application_number = None
+        self.name_abbreviation = None
+        self.advisor_number = None
+        self.client_number = None
+        self.accounting_number = None
+        self.accounting_year = None
+        self.date_start = None
+        self.date_end = None
+        self.password = None
+        self.prima_nota_page = None
+        self.data_fp = None
+        
+        self.number_of_blocks = None
+        self.meta = None
+    
+    
+    def _parse_date(self, binary_data):
+        assert len(binary_data) == 6, len(binary_data)
+        day = int(binary_data[:2])
+        month = int(binary_data[2:4])
+        year = int(binary_data[4:])
+        if year < 60:
+            year += 2000
+        else:
+            year += 1900
+        return datetime.date(year, month, day)
+    
+    
+    def from_binary(self, binary_data):
+        assert self.meta == None
+        assert len(binary_data) == 128
+        assert binary_data[0] in ['V', '*']
+        meta = {}
+        meta['do_process'] = (binary_data[0] == 'V')
+        meta['file_no'] = int(binary_data[1:6])
+        meta['application_number'] = int(binary_data[6:8]) # TODO -> 11?
+        meta['name_abbreviation'] = binary_data[8:10]
+        meta['advisor_number'] = int(binary_data[10:17])
+        meta['client_number'] = int(binary_data[17:22])
+        meta['accounting_number'] = int(binary_data[22:26])
+        meta['accounting_year'] = int(binary_data[26:28])
+        assert '0' * 4 == binary_data[28:32]
+        meta['date_start'] = self._parse_date(binary_data[32:38])
+        meta['date_end'] = self._parse_date(binary_data[38:44])
+        meta['prima_nota_page'] = int(binary_data[44:47])
+        meta['password'] = binary_data[47:51]
+        meta['number_data_blocks'] = int(binary_data[51:56])
+        meta['last_prima_nota_page'] = int(binary_data[56:59])
+        assert binary_data[59] == ' '
+        assert binary_data[60] == '1'
+        meta['version_info'] = binary_data[61:71]
+        # specification says "linksbündig, mit 4 Leerzeichen aufgefüllt."
+        # is this really always 4 spaces or is this just the filling if you 
+        # use the "default"(?) "1,4,4,SELF"?
+        assert binary_data[71:75] == '    '
+        assert ' ' * 53 == binary_data[75:128]
+        
+        self.meta = meta
+        return meta
+    
+    
+    def parsed_data(self):
+        assert self.meta != None
+        return self.meta
+    
+    
+    def to_binary(self, version_identifier):
+        "Return the binary KNE format for the specified data."
+        bin_line = 'V' + ("%05d" % self.file_no)
+        bin_line += self.application_number
+        bin_line += self.name_abbreviation
+        bin_line += self.advisor_number
+        bin_line += self.client_number
+        bin_line += self.accounting_number + str(self.accounting_year)[2:]
+        bin_line += '0000' + _short_date(self.date_start)
+        bin_line += _short_date(self.date_end)
+        bin_line += self.prima_nota_page
+        bin_line += self.password
+        bin_line += "%05d" % self.number_of_blocks
+        bin_line += self.prima_nota_page
+        bin_line += ' ' + '1'
+        bin_line += version_identifier + '    '
+        bin_line += ' ' * 53
+        assert len(bin_line) == 128
+        return bin_line
+
+
+
+class TransactionManager(object):
+    
+    def __init__(self, config, version_identifier, data_fp_builder):
+        self.config = config
+        self.version_identifier = version_identifier
+        self.data_fp_builder = data_fp_builder
+        
+        self.transaction_files = []
+    
+    
+    def append_posting_line(self, line):
+        if self.transaction_files == []:
+            new_file = TransactionFile(self.config, self.version_identifier)
+            self.transaction_files.append(new_file)
+        tf = self.transaction_files[-1]
+        assert tf.append_posting_line(line)
+    
+    
+    def finish(self):
+        """Write all transaction files using the data_fp_builder. No 
+        transaction data may be appended after calling finish (although 
+        finish() itself may be called multiple times.
+        Return a list of control records. 
+        """
+        control_records = []
+        for i, tf in enumerate(self.transaction_files):
+            data_fp = self.data_fp_builder(i)
+            data_fp.write(tf.to_binary())
+            control_records.append(tf.build_control_record())
+        return control_records
+
+
+
 class TransactionFile(object):
     
     def __init__(self, config, version_identifier=None):
@@ -274,12 +399,6 @@ class TransactionFile(object):
             self.open_for_additions = False
     
     
-    def to_binary(self):
-        self.finish()
-        self.number_of_blocks = self._get_number_of_blocks()
-        return self.binary_info
-    
-    
     def from_binary(self, binary_control_record, data_fp):
         """Takes a binary control record and a file-like object which contains
         the data and parses them."""
@@ -287,102 +406,17 @@ class TransactionFile(object):
         cr.from_binary(binary_control_record)
         self.cr = cr
         # TODO: Handle data_fp
-
-
-
-class ControlRecord(object):
-    "Control record after data carrier header in the control file"
-    def __init__(self):
-        self.file_no = 1
-        self.application_number = None
-        self.name_abbreviation = None
-        self.advisor_number = None
-        self.client_number = None
-        self.accounting_number = None
-        self.accounting_year = None
-        self.date_start = None
-        self.date_end = None
-        self.password = None
-        self.prima_nota_page = None
-        self.data_fp = None
-        
-        self.number_of_blocks = None
     
     
-    def from_binary(self, binary_data):
-        assert len(binary_data) == 128
-        assert binary_data[0] in ['V', '*']
-        self.do_process = (binary_data[0] == 'V')  # TODO
-        self.file_no = int(binary_data[1:6])
-        app_info = int(binary_data[6:8]) # TODO -> 11?
-        name_abbreviation = binary_data[8:10]
-        advisor_number = int(binary_data[10:17])
-        print advisor_number
-        client_number = int(binary_data[17:22])
-        print client_number
-        accounting_number = int(binary_data[22:28])
-        date_from = int(binary_data[28:38])
-        print date_from
-        date_to = int(binary_data[38:44])
-        print date_to
-        prima_nota_page = int(binary_data[44:47])
-        password = binary_data[47:51]
-        print repr(password)
-        
+    def get_metadata(self):
+        assert self.cr != None
+        return self.cr.parsed_data()
     
     
-    def to_binary(self, version_identifier):
-        "Return the binary KNE format for the specified data."
-        bin_line = 'V' + ("%05d" % self.file_no)
-        bin_line += self.application_number
-        bin_line += self.name_abbreviation
-        bin_line += self.advisor_number
-        bin_line += self.client_number
-        bin_line += self.accounting_number + str(self.accounting_year)[2:]
-        bin_line += '0000' + _short_date(self.date_start)
-        bin_line += _short_date(self.date_end)
-        bin_line += self.prima_nota_page
-        bin_line += self.password
-        bin_line += "%05d" % self.number_of_blocks
-        bin_line += self.prima_nota_page
-        bin_line += ' ' + '1'
-        bin_line += version_identifier + '    '
-        bin_line += ' ' * 53
-        assert len(bin_line) == 128
-        return bin_line
-
-
-
-class TransactionManager(object):
-    
-    def __init__(self, config, version_identifier, data_fp_builder):
-        self.config = config
-        self.version_identifier = version_identifier
-        self.data_fp_builder = data_fp_builder
-        
-        self.transaction_files = []
-    
-    
-    def append_posting_line(self, line):
-        if self.transaction_files == []:
-            new_file = TransactionFile(self.config, self.version_identifier)
-            self.transaction_files.append(new_file)
-        tf = self.transaction_files[-1]
-        assert tf.append_posting_line(line)
-    
-    
-    def finish(self):
-        """Write all transaction files using the data_fp_builder. No 
-        transaction data may be appended after calling finish (although 
-        finish() itself may be called multiple times.
-        Return a list of control records. 
-        """
-        control_records = []
-        for i, tf in enumerate(self.transaction_files):
-            data_fp = self.data_fp_builder(i)
-            data_fp.write(tf.to_binary())
-            control_records.append(tf.build_control_record())
-        return control_records
+    def to_binary(self):
+        self.finish()
+        self.number_of_blocks = self._get_number_of_blocks()
+        return self.binary_info
 
 
 
@@ -458,8 +492,6 @@ class KneWriter(object):
         config.setdefault("prima_nota_page", 1)
         config["prima_nota_page"] = "%03d" % int(config["prima_nota_page"])
         assert len(config["prima_nota_page"]) == 3
-        
-        
         
         # should not be set from the user as this are more or less constants
         config.setdefault("version_complete_feed_line", '1')
@@ -586,6 +618,10 @@ class KneReader(object):
     
     def get_file(self, index):
         return self.files[index]
+    
+    
+    def get_number_of_files(self):
+        return len(self.files)
 
 
 

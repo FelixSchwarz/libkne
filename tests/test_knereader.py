@@ -28,27 +28,32 @@ class TestKneReaderLxOffice(unittest.TestCase):
         config = self.reader.get_config()
         self.assertEqual(471156, config["advisor_number"])
         self.assertEqual("Foo Bar", config["advisor_name"])
-        #self.assertEqual(42212, config["client_number"])
         
         self.assertEqual(1, config["number_data_files"])
         self.assertEqual(1, config["number_last_data_file"])
         self.assertEqual(1, config["data_carrier_number"])
     
     
-    def test_read_posting_lines(self):
+    def test_read_control_record(self):
+        self.assertEqual(1, self.reader.get_number_of_files())
         tfile = self.reader.get_file(0)
-        cr = tfile.cr # TODO
-        self.assertEqual(True, cr.do_process) # TODO: MEthode von tfile!
-        self.assertEqual(1, cr.file_no)     # TODO: MEthode von tfile!
-        
-        
-        
-        
-        #self.assertEqual(1, config["accounting_number"])
-        
-        #self.assertEqual(date(2008, 05, 01), config["date_start"])
-        #self.assertEqual(date(2008, 06, 15), config["date_end"])
-        
-        
+        meta = tfile.get_metadata()
+        self.assertEqual(True, meta['do_process'])
+        self.assertEqual(1, meta['file_no'])
+        self.assertEqual(11, meta['application_number'])
+        self.assertEqual('00', meta['name_abbreviation']) # VERIFY DATA FILE!
+        self.assertEqual(471156, meta['advisor_number'])
+        self.assertEqual(42212, meta['client_number'])
+        self.assertEqual(11, meta['accounting_number'])
+        self.assertEqual(8, meta['accounting_year'])
+        self.assertEqual(date(2008, 05, 01), meta['date_start'])
+        self.assertEqual(date(2008, 06, 15), meta['date_end'])
+        self.assertEqual(1, meta['prima_nota_page'])
+        self.assertEqual('0000', meta['password'])
+        self.assertEqual(1, meta['number_data_blocks'])
+        self.assertEqual('1,4,4,SELF', meta['version_info'])
+    
+    
+    
     # Check the posting lines
 
