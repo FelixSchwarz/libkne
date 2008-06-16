@@ -54,9 +54,21 @@ class TestKneReaderLxOffice(unittest.TestCase):
         self.assertEqual('1,4,4,SELF', meta['version_info'])
     
     
+    def test_read_data_file(self):
+        tfile = self.reader.get_file(0)
+        self.assertTrue(tfile.contains_transaction_data())
+        meta = tfile.get_metadata()
+        self.assertEqual(4, meta["used_general_ledger_account_no_length"])
+        self.assertEqual(4, meta["stored_general_ledger_account_no_length"])
+    
+    
     def test_read_posting_line(self):
         tfile = self.reader.get_file(0)
         lines = tfile.get_posting_lines()
         self.assertEqual(1, len(lines))
+        line = lines[0]
+        self.assertEqual(Decimal(1250), line.transaction_volume)
+        self.assertEqual(1400, line.offsetting_account)
+        
     # Check the posting lines
 

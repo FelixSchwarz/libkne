@@ -53,6 +53,20 @@ def get_number_of_decimal_places(number_string):
 # ------------------------------------------------------------------------------
 
 
+def parse_short_date(binary_data):
+    '''Parses a short date with the format "DDMMJJ" into a real datetime.date.
+    Years lower than 60 are interpreted as 19xx, all other years as 20xx.'''
+    assert len(binary_data) == 6, len(binary_data)
+    day = int(binary_data[:2])
+    month = int(binary_data[2:4])
+    year = int(binary_data[4:])
+    if year < 60:
+        year += 2000
+    else:
+        year += 1900
+    return datetime.date(year, month, day)
+
+
 
 class PostingLine(object):
     def __init__(self):
@@ -75,6 +89,43 @@ class PostingLine(object):
         
         char_re = "([^0-9a-zA-Z\$%&*\+-/])"
         self.record_field_valid_characters = re.compile(char_re)
+    
+    
+    def _parse_number(self, data, start_index, max_end_index):
+        string_number = ''
+        for i in range(start_index, max_end_index):
+            if data[i] not in map(str, range(10)):
+                break
+            string_number += data[i]
+        return (int(string_number), len(string_number))
+    
+    
+    def _parse_transaction_volume(self, line, data):
+        assert data[0] in ['+', '-'], repr(data[0])
+        volume, end_index = self._parse_number(data, 1, 10)
+        complete_volume = int(data[0] + str(volume))
+        volume = Decimal(complete_volume) / Decimal(100)
+        line.transaction_volume = volume
+        return end_index
+    
+    
+    def _parse_offsetting_account(self, line, data, start_index):
+        end_index = start_index
+        if data[start_index] == 'a':
+            start = start_index+1
+            account, end_index = self._parse_number(data, start, start+9)
+            self.offsetting_account = account
+        return end_index
+    
+    
+    @classmethod
+    def from_binary(cls, binary_data, start_index):
+        data = binary_data[start_index:]
+        line = cls()
+        end_index = line._parse_transaction_volume(line, data)
+        # TODO: Buchungsschlüssel
+        end_index = line._parse_offsetting_account(line, data, end_index + 1)
+        return (line, start_index + end_index)
     
     
     def _assert_only_valid_characters_for_record_field(self, value):
@@ -160,18 +211,6 @@ class ControlRecord(object):
         self.meta = None
     
     
-    def _parse_date(self, binary_data):
-        assert len(binary_data) == 6, len(binary_data)
-        day = int(binary_data[:2])
-        month = int(binary_data[2:4])
-        year = int(binary_data[4:])
-        if year < 60:
-            year += 2000
-        else:
-            year += 1900
-        return datetime.date(year, month, day)
-    
-    
     def from_binary(self, binary_data):
         assert self.meta == None
         assert len(binary_data) == 128
@@ -186,8 +225,8 @@ class ControlRecord(object):
         meta['accounting_number'] = int(binary_data[22:26])
         meta['accounting_year'] = int(binary_data[26:28])
         assert '0' * 4 == binary_data[28:32]
-        meta['date_start'] = self._parse_date(binary_data[32:38])
-        meta['date_end'] = self._parse_date(binary_data[38:44])
+        meta['date_start'] = parse_short_date(binary_data[32:38])
+        meta['date_end'] = parse_short_date(binary_data[38:44])
         meta['prima_nota_page'] = int(binary_data[44:47])
         meta['password'] = binary_data[47:51]
         meta['number_data_blocks'] = int(binary_data[51:56])
@@ -279,7 +318,7 @@ class TransactionFile(object):
         
         self.open_for_additions = (self.binary_info != None)
         self.number_of_blocks = None
-        
+    
     
     def _client_total(self):
         client_sum_total = 0
@@ -364,6 +403,10 @@ class TransactionFile(object):
         return cr
     
     
+    def contains_transaction_data(self):
+        return self.transaction_data
+    
+    
     def _compute_number_of_fill_bytes(self):
         number_of_bytes = len(self.binary_info)
         missing_bytes = 256 - (number_of_bytes % 256)
@@ -399,18 +442,90 @@ class TransactionFile(object):
             self.open_for_additions = False
     
     
+    def _check_complete_feed_line(self, metadata, binary_data):
+        assert len(binary_data) == 80
+        assert binary_data[0] == '\x1d', repr(binary_data[0])
+        assert binary_data[1] == '\x18'
+        assert binary_data[2] == '1'
+        assert metadata['file_no'] == int(binary_data[3:6])
+        print repr(binary_data[6:])
+        assert 11 == int(binary_data[6:8]) # FIBU/OPOS transaction data
+        assert metadata['name_abbreviation'] == binary_data[8:10]
+        assert metadata['advisor_number'] == int(binary_data[10:17])
+        assert metadata['client_number'] == int(binary_data[17:22])
+        assert metadata['accounting_number'] == int(binary_data[22:26])
+        assert metadata['accounting_year'] == int(binary_data[26:28])
+        date_start = parse_short_date(binary_data[28:34])
+        assert metadata['date_start'] == date_start
+        date_end = parse_short_date(binary_data[34:40])
+        assert metadata['date_end'] == date_end
+        assert metadata['prima_nota_page'] == int(binary_data[40:43])
+        assert metadata['password'] == binary_data[43:47]
+        # Specification says "Anwendungsinfo"/"Konstante" - maybe this is a 
+        # field which can be used arbitrarily?
+        assert ' ' * 16 == binary_data[47:63]
+        # Specification says "Input-Info"/"Konstante" - maybe this is a 
+        # field which can be used arbitrarily?
+        assert ' ' * 16 == binary_data[63:79]
+        assert 'y' == binary_data[79]
+    
+    
+    def _read_version_record(self, metadata, binary_data):
+        assert len(binary_data) == 13
+        if '\xb5' == binary_data[0]:
+            self.transaction_data = True
+        else:
+            assert False
+        assert '1' == binary_data[1]
+        assert ',' == binary_data[2]
+        used_general_ledger_account_no_length = int(binary_data[3])
+        assert used_general_ledger_account_no_length >= 4
+        assert used_general_ledger_account_no_length <= 8
+        metadata["used_general_ledger_account_no_length"] = \
+            used_general_ledger_account_no_length
+        assert ',' == binary_data[4]
+        stored_general_ledger_account_no_length = int(binary_data[5])
+        assert stored_general_ledger_account_no_length >= 4
+        assert stored_general_ledger_account_no_length <= 8
+        metadata["stored_general_ledger_account_no_length"] = \
+            stored_general_ledger_account_no_length
+        assert stored_general_ledger_account_no_length >= used_general_ledger_account_no_length
+        assert ',' == binary_data[6]
+        # Specification says: "Produktkürzel"/"Konstante"
+        assert 'SELF' == binary_data[7:11]
+        assert '\x1c' == binary_data[11]
+        assert 'y' == binary_data[12]
+    
+    
     def from_binary(self, binary_control_record, data_fp):
         """Takes a binary control record and a file-like object which contains
         the data and parses them."""
         cr = ControlRecord()
         cr.from_binary(binary_control_record)
         self.cr = cr
-        # TODO: Handle data_fp
+        binary_data = data_fp.read()
+        metadata = self.get_metadata()
+        number_data_blocks = metadata["number_data_blocks"]
+        assert number_data_blocks > 0
+        assert 256 * number_data_blocks == len(binary_data)
+        self._check_complete_feed_line(metadata, binary_data[:80])
+        self._read_version_record(metadata, binary_data[80:93])
+        end_index = 93 - 1
+        while (end_index < len(binary_data)):
+            start_index = end_index + 1
+            line, end_index = PostingLine.from_binary(binary_data, start_index)
+            self.lines.append(line)
+            break
     
     
     def get_metadata(self):
         assert self.cr != None
         return self.cr.parsed_data()
+    
+    
+    def get_posting_lines(self):
+        assert not self.open_for_additions
+        return self.lines
     
     
     def to_binary(self):
@@ -634,7 +749,7 @@ class KneFileReader(KneReader):
         data_fps = []
         if data_filenames != None:
             for filename in data_filenames:
-                fake_fp = StringIO(file(header_filename, "rb").read())
+                fake_fp = StringIO(file(filename, "rb").read())
                 data_fps.append(fake_fp)
         super(KneFileReader, self).__init__(header_fp=header_fp, 
                                             data_fps=data_fps)
@@ -646,6 +761,8 @@ Deutsch/German                Englisch/English
 -----------------------------------------------------------------
 Abrechnungsnummer             accounting number
 Anwendungsnummer              application number
+Aufgezeichnete Sachkontonummernlänge
+                              used general ledger account number length
 Basiswährungsbetrag           base currency amount
 Belegfeld                     record field
 Beraternummer                 advisor number
@@ -656,6 +773,8 @@ Buchungszeile                 posting line
 Datenträgerkennsatz           data carrier header
 Datenträgernummer             data carrier number
 Gegenkonto                    offsetting account
+Gespeicherte Sachkontonummernlänge
+                              stored general ledger account number length
 Konto                         account
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
@@ -666,6 +785,7 @@ Skonto                        cash discount
 Stammdaten                    master data
 Umsatz (einer Buchung)        transaction volume
 Versionskennung               version identifier
+Versionssatz                  version record
 Verwaltungssatz               control record
 Vollvorlauf                   complete feed line
 Währungskennzeichen           Währungskennzeichen
