@@ -69,6 +69,13 @@ class TestKneReaderLxOffice(unittest.TestCase):
         line = lines[0]
         self.assertEqual(Decimal(1250), line.transaction_volume)
         self.assertEqual(1400, line.offsetting_account)
+        self.assertEqual('1010', line.record_field1)
+        self.assertEqual('15-01-20070', line.record_field2)
+        self.assertEqual(date(2008, 06, 13), line.date)
+        self.assertEqual(1000, line.account_number)
+        self.assertEqual('Wasserspiel GmbH', line.posting_text)
+        self.assertEqual('EUR', line.currency_code_transaction_volume)
+        
         
     # Check the posting lines
 

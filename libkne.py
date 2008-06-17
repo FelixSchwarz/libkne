@@ -97,34 +97,89 @@ class PostingLine(object):
             if data[i] not in map(str, range(10)):
                 break
             string_number += data[i]
-        return (int(string_number), len(string_number))
+        end_index = start_index + len(string_number) - 1
+        return (int(string_number), end_index)
     
     
-    def _parse_transaction_volume(self, line, data):
+    def _parse_transaction_volume(self, data):
         assert data[0] in ['+', '-'], repr(data[0])
         volume, end_index = self._parse_number(data, 1, 10)
         complete_volume = int(data[0] + str(volume))
         volume = Decimal(complete_volume) / Decimal(100)
-        line.transaction_volume = volume
+        self.transaction_volume = volume
         return end_index
     
     
-    def _parse_offsetting_account(self, line, data, start_index):
+    def _parse_offsetting_account(self, data, start_index):
         end_index = start_index
         if data[start_index] == 'a':
             start = start_index+1
+            # TODO: Laenge der aufgezeichneten Nummern überprüfen!
             account, end_index = self._parse_number(data, start, start+9)
             self.offsetting_account = account
         return end_index
     
     
+    def _parse_record_field(self, data, start_index, first_character, attr_name):
+        end_index = start_index
+        if data[start_index] == first_character:
+            start = start_index+1
+            match = re.match('^([0-9a-zA-Z$%&\*\+\-/]{1,12})\x1c', data[start:])
+            if match != None:
+                record_field = match.group(1)
+                setattr(self, attr_name, record_field)
+                end_index = start + len(record_field) - 1 + 1
+        return end_index
+    
+    
+    def _parse_transaction_date(self, data, start_index, metadata):
+        assert 'd' == data[start_index]
+        day = int(data[start_index+1:start_index+3])
+        month = int(data[start_index+3:start_index+5])
+        
+        date_start = metadata['date_start']
+        date_end = metadata['date_end']
+        if month >= date_start.month:
+            year = date_start.year
+        else:
+            assert month <= date_end.year
+            year = date_end.year
+        self.date = datetime.date(year, month, day)
+        end_index = start_index + 4
+        return end_index
+    
+    
+    def _parse_account(self, data, start_index):
+        assert 'e' == data[start_index]
+        start = start_index+1
+        # TODO: Laenge der aufgezeichneten Nummern überprüfen!
+        account, end_index = self._parse_number(data, start, start+9)
+        self.account_number  = account
+        return end_index
+    
+    
+    def _parse_posting_text(self, data, start_index):
+        assert '\x1e' == data[start_index]
+        index = start_index + 1
+        while data[index] != '\x1c' and index < start_index + 30 - 1:
+            index += 1
+        assert data[index] == '\x1c'
+        text = data[start_index+1:index]
+        self.posting_text = text.decode('datev_ascii')
+        return index
+    
+    
     @classmethod
-    def from_binary(cls, binary_data, start_index):
+    def from_binary(cls, binary_data, start_index, metadata):
         data = binary_data[start_index:]
         line = cls()
-        end_index = line._parse_transaction_volume(line, data)
-        # TODO: Buchungsschlüssel
-        end_index = line._parse_offsetting_account(line, data, end_index + 1)
+        end_index = line._parse_transaction_volume(data)
+        end_index = line._parse_offsetting_account(data, end_index+1)
+        end_index = line._parse_record_field(data, end_index+1, '\xbd', 'record_field1')
+        end_index = line._parse_record_field(data, end_index+1, '\xbe', 'record_field2')
+        end_index = line._parse_transaction_date(data, end_index+1, metadata)
+        end_index = line._parse_account(data, end_index+1)
+        end_index = line._parse_posting_text(data, end_index+1)
         return (line, start_index + end_index)
     
     
@@ -513,7 +568,7 @@ class TransactionFile(object):
         end_index = 93 - 1
         while (end_index < len(binary_data)):
             start_index = end_index + 1
-            line, end_index = PostingLine.from_binary(binary_data, start_index)
+            line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
             self.lines.append(line)
             break
     
@@ -788,7 +843,7 @@ Versionskennung               version identifier
 Versionssatz                  version record
 Verwaltungssatz               control record
 Vollvorlauf                   complete feed line
-Währungskennzeichen           Währungskennzeichen
+Währungskennzeichen           currency code
 Währungskurs                  exchange rate
 Wirtschaftsjahr               financial year
 """
