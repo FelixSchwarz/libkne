@@ -67,6 +67,16 @@ def parse_short_date(binary_data):
     return datetime.date(year, month, day)
 
 
+def parse_number(data, start_index, max_end_index):
+    string_number = ''
+    for i in range(start_index, max_end_index):
+        if data[i] not in map(str, range(10)):
+            break
+        string_number += data[i]
+    end_index = start_index + len(string_number) - 1
+    return (int(string_number), end_index)
+    
+    
 
 class PostingLine(object):
     def __init__(self):
@@ -91,19 +101,9 @@ class PostingLine(object):
         self.record_field_valid_characters = re.compile(char_re)
     
     
-    def _parse_number(self, data, start_index, max_end_index):
-        string_number = ''
-        for i in range(start_index, max_end_index):
-            if data[i] not in map(str, range(10)):
-                break
-            string_number += data[i]
-        end_index = start_index + len(string_number) - 1
-        return (int(string_number), end_index)
-    
-    
     def _parse_transaction_volume(self, data):
         assert data[0] in ['+', '-'], repr(data[0])
-        volume, end_index = self._parse_number(data, 1, 10)
+        volume, end_index = parse_number(data, 1, 10)
         complete_volume = int(data[0] + str(volume))
         volume = Decimal(complete_volume) / Decimal(100)
         self.transaction_volume = volume
@@ -111,12 +111,11 @@ class PostingLine(object):
     
     
     def _parse_offsetting_account(self, data, start_index):
-        end_index = start_index
-        if data[start_index] == 'a':
-            start = start_index+1
-            # TODO: Laenge der aufgezeichneten Nummern überprüfen!
-            account, end_index = self._parse_number(data, start, start+9)
-            self.offsetting_account = account
+        assert 'a' == data[start_index]
+        start = start_index+1
+        # TODO: Laenge der aufgezeichneten Nummern überprüfen!
+        account, end_index = parse_number(data, start, start+9)
+        self.offsetting_account = account
         return end_index
     
     
@@ -153,19 +152,31 @@ class PostingLine(object):
         assert 'e' == data[start_index]
         start = start_index+1
         # TODO: Laenge der aufgezeichneten Nummern überprüfen!
-        account, end_index = self._parse_number(data, start, start+9)
+        account, end_index = parse_number(data, start, start+9)
         self.account_number  = account
         return end_index
     
     
     def _parse_posting_text(self, data, start_index):
-        assert '\x1e' == data[start_index]
+        index = start_index
+        if data[start_index] == '\x1e':
+            index = start_index + 1
+            while data[index] != '\x1c' and index < start_index + 30 - 1:
+                index += 1
+            assert data[index] == '\x1c'
+            text = data[start_index+1:index]
+            self.posting_text = text.decode('datev_ascii')
+        return index
+    
+    
+    def _parse_currency_code(self, data, start_index):
+        assert '\xb3' == data[start_index]
         index = start_index + 1
-        while data[index] != '\x1c' and index < start_index + 30 - 1:
+        while data[index] != '\x1c' and index <= start_index + 3:
             index += 1
         assert data[index] == '\x1c'
-        text = data[start_index+1:index]
-        self.posting_text = text.decode('datev_ascii')
+        code = data[start_index+1:index].upper()
+        self.currency_code_transaction_volume = code
         return index
     
     
@@ -180,7 +191,10 @@ class PostingLine(object):
         end_index = line._parse_transaction_date(data, end_index+1, metadata)
         end_index = line._parse_account(data, end_index+1)
         end_index = line._parse_posting_text(data, end_index+1)
-        return (line, start_index + end_index)
+        end_index = line._parse_currency_code(data, end_index+1)
+        assert 'y' == data[end_index + 1]
+        end_index += 1
+        return (line, start_index + end_index + 1)
     
     
     def _assert_only_valid_characters_for_record_field(self, value):
@@ -503,7 +517,6 @@ class TransactionFile(object):
         assert binary_data[1] == '\x18'
         assert binary_data[2] == '1'
         assert metadata['file_no'] == int(binary_data[3:6])
-        print repr(binary_data[6:])
         assert 11 == int(binary_data[6:8]) # FIBU/OPOS transaction data
         assert metadata['name_abbreviation'] == binary_data[8:10]
         assert metadata['advisor_number'] == int(binary_data[10:17])
@@ -552,6 +565,19 @@ class TransactionFile(object):
         assert 'y' == binary_data[12]
     
     
+    def more_posting_lines(self, binary_data, end_index):
+        return (binary_data[end_index] not in ['x', 'w'])
+    
+    
+    def _check_client_total(self, binary_data, start_index):
+        client_total, end_index = parse_number(binary_data, start_index+1, start_index+1+14-1)
+        if binary_data[start_index] == 'w':
+            client_total *= -1
+        assert 'y' == binary_data[end_index+1]
+        assert 'z' == binary_data[end_index+2]
+        return end_index + 2
+    
+    
     def from_binary(self, binary_control_record, data_fp):
         """Takes a binary control record and a file-like object which contains
         the data and parses them."""
@@ -566,11 +592,16 @@ class TransactionFile(object):
         self._check_complete_feed_line(metadata, binary_data[:80])
         self._read_version_record(metadata, binary_data[80:93])
         end_index = 93 - 1
-        while (end_index < len(binary_data)):
+        while (end_index < len(binary_data)) and \
+            (self.more_posting_lines(binary_data, end_index)):
             start_index = end_index + 1
             line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
             self.lines.append(line)
-            break
+        end_index = self._check_client_total(binary_data, end_index)
+        index = end_index + 1
+        while index + 1 < len(binary_data):
+            assert '\x00' == binary_data[index]
+            index += 1
     
     
     def get_metadata(self):
@@ -831,6 +862,7 @@ Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
                               stored general ledger account number length
 Konto                         account
+Mandantenendsumme             client total
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
 Primanota                     prima nota
