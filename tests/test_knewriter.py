@@ -6,8 +6,9 @@ import StringIO
 import unittest
 
 
-from libkne import KneWriter, PostingLine
+from libkne import KneWriter, KneReader, PostingLine
 
+# TODO: Kann man auch lkne statt SELF verwenden?
 
 def _default_config():
     config = {}
@@ -132,7 +133,7 @@ class TestPostingLine(unittest.TestCase):
 
 
 
-class TestKneWriting(unittest.TestCase):
+class TestKneWritingSimpleTransactionData(unittest.TestCase):
     def setUp(self):
         self.header_fp = StringIO.StringIO()
         self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
@@ -153,7 +154,7 @@ class TestKneWriting(unittest.TestCase):
                        '00001' + '00001' + (' ' * 95)
         control_record = 'V' + '00001' + '11' + 'FS' + '1234567' + '00042' + \
                          '000108' + '0000040204' + '290204' + '001' + '    ' + \
-                         '00002' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
+                         '00002' + '001' + ' ' + '1' + '1,8,8,SELF    ' + \
                          (' ' * 53)
         self.assertEqual(128, len(control_record))
         expected_binary = data_carrier + control_record
@@ -176,7 +177,7 @@ class TestKneWriting(unittest.TestCase):
         
     
     def _check_version_string(self, binary_data):
-        expected_version_string = '\xb5' + '1,8,8,lkne' + '\x1c' + 'y'
+        expected_version_string = '\xb5' + '1,8,8,SELF' + '\x1c' + 'y'
         self.assertEqual(13, len(expected_version_string))
         #print repr(expected_version_string)
         #print repr(binary_data)
@@ -223,4 +224,9 @@ class TestKneWriting(unittest.TestCase):
         
         # TODO: Abschluss der Datendatei!
         self._check_for_filling(binary_data, end, 256)
+
+    def test_read_dogfood(self):
+        self._assemble_data()
+        self.reader = KneReader(self.header_fp, [self.data_fp])
+
 

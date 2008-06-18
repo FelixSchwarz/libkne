@@ -133,9 +133,10 @@ class PostingLine(object):
     
     def _parse_transaction_date(self, data, start_index, metadata):
         assert 'd' == data[start_index]
-        day = int(data[start_index+1:start_index+3])
-        month = int(data[start_index+3:start_index+5])
+        date_number, end_index = parse_number(data, start_index+1, start_index+5)
         
+        day = int(str(date_number)[:-2])
+        month = int(str(date_number)[-2:])
         date_start = metadata['date_start']
         date_end = metadata['date_end']
         if month >= date_start.month:
@@ -144,7 +145,6 @@ class PostingLine(object):
             assert month <= date_end.year
             year = date_end.year
         self.date = datetime.date(year, month, day)
-        end_index = start_index + 4
         return end_index
     
     
@@ -621,7 +621,7 @@ class TransactionFile(object):
 
 
 
-product_abbreviation = "lkne"
+product_abbreviation = "SELF"
 
 class KneWriter(object):
     
