@@ -225,6 +225,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         # TODO: Abschluss der Datendatei!
         self._check_for_filling(binary_data, end, 256)
 
+
     def test_read_dogfood(self):
         self._assemble_data()
         self.reader = KneReader(self.header_fp, [self.data_fp])
