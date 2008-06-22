@@ -38,8 +38,18 @@ class PostingLine(object):
         return end_index
     
     
+    def _parse_posting_key(self, data, start_index):
+        if data[start_index] == 'l':
+            start = start_index + 1
+            posting_key, end_index = parse_number(data, start, start+1)
+            self.posting_key = posting_key
+            return end_index
+        else:
+            return start_index - 1
+    
+
     def _parse_offsetting_account(self, data, start_index):
-        assert 'a' == data[start_index]
+        assert 'a' == data[start_index], repr(data[start_index])
         start = start_index+1
         # TODO: Laenge der aufgezeichneten Nummern überprüfen!
         account, end_index = parse_number(data, start, start+9)
@@ -48,7 +58,6 @@ class PostingLine(object):
     
     
     def _parse_record_field(self, data, start_index, first_character, attr_name):
-        end_index = start_index
         if data[start_index] == first_character:
             start = start_index+1
             match = re.match('^([0-9a-zA-Z$%&\*\+\-/]{1,12})\x1c', data[start:])
@@ -56,7 +65,9 @@ class PostingLine(object):
                 record_field = match.group(1)
                 setattr(self, attr_name, record_field)
                 end_index = start + len(record_field) - 1 + 1
-        return end_index
+            return end_index
+        else:
+            return start_index - 1
     
     
     def _parse_transaction_date(self, data, start_index, metadata):
@@ -112,8 +123,8 @@ class PostingLine(object):
     def from_binary(cls, binary_data, start_index, metadata):
         data = binary_data[start_index:]
         line = cls()
-        #print repr(data)
         end_index = line._parse_transaction_volume(data)
+        end_index = line._parse_posting_key(data, end_index+1)
         end_index = line._parse_offsetting_account(data, end_index+1)
         end_index = line._parse_record_field(data, end_index+1, '\xbd', 'record_field1')
         end_index = line._parse_record_field(data, end_index+1, '\xbe', 'record_field2')
