@@ -61,8 +61,11 @@ def parse_short_date(binary_data):
 
 
 def parse_number(data, start_index, max_end_index):
+    '''Reads all digits from start_index until either a non-digit character is
+    read or the digit on position max_end_index was read successfully. Returns
+    the last index where a digit was read.'''
     string_number = ''
-    for i in range(start_index, max_end_index):
+    for i in range(start_index, max_end_index+1):
         if data[i] not in map(str, range(10)):
             break
         string_number += data[i]

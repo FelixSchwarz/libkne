@@ -1,9 +1,10 @@
 # -*- coding: UTF-8 -*-
 
 from decimal import Decimal
+import datetime
 import re
 
-from util import get_number_of_decimal_places
+from util import get_number_of_decimal_places, parse_number
 
 class PostingLine(object):
     def __init__(self):
@@ -90,7 +91,7 @@ class PostingLine(object):
             index = start_index + 1
             while data[index] != '\x1c' and index < start_index + 30 - 1:
                 index += 1
-            assert data[index] == '\x1c'
+            assert data[index] == '\x1c', repr(data[index])
             text = data[start_index+1:index]
             self.posting_text = text.decode('datev_ascii')
         return index
@@ -120,7 +121,7 @@ class PostingLine(object):
         end_index = line._parse_account(data, end_index+1)
         end_index = line._parse_posting_text(data, end_index+1)
         end_index = line._parse_currency_code(data, end_index+1)
-        print repr(data[end_index:])
+        #print repr(data[end_index-2:])
         assert 'y' == data[end_index + 1]
         end_index += 1
         return (line, start_index + end_index)

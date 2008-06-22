@@ -4,7 +4,7 @@ import math
 
 from controlrecord import ControlRecord
 from postingline import PostingLine
-from util import parse_short_date, _short_date
+from util import parse_short_date, _short_date, parse_number
 
 class TransactionFile(object):
     
@@ -144,6 +144,18 @@ class TransactionFile(object):
             self.open_for_additions = False
     
     
+    def _remove_fill_bytes(self, binary_data, number_data_blocks):
+        filtered_data = binary_data
+        for i in range(number_data_blocks, 0, - 1):
+            end_index = 256 * i - 1
+            assert ('\x00' * 6) == filtered_data[end_index-5:end_index+1]
+            start_index = end_index
+            while filtered_data[start_index] == '\x00':
+                start_index -= 1
+            filtered_data = filtered_data[:start_index+1] + filtered_data[end_index+1:]
+        return filtered_data
+    
+    
     def _check_complete_feed_line(self, metadata, binary_data):
         assert len(binary_data) == 80
         assert binary_data[0] == '\x1d', repr(binary_data[0])
@@ -203,11 +215,13 @@ class TransactionFile(object):
     
     
     def _check_client_total(self, binary_data, start_index):
-        client_total, end_index = parse_number(binary_data, start_index+1, start_index+1+14-1)
+        nr_start_index = start_index + 1
+        nr_max_end_index = start_index+1+14-1
+        client_total, end_index = parse_number(binary_data, nr_start_index, nr_max_end_index)
         if binary_data[start_index] == 'w':
             client_total *= -1
-        assert 'y' == binary_data[end_index+1]
-        assert 'z' == binary_data[end_index+2]
+        assert 'y' == binary_data[end_index+1], repr(binary_data[end_index+1])
+        assert 'z' == binary_data[end_index+2], repr(binary_data[end_index+2])
         return end_index + 2
     
     
@@ -222,16 +236,18 @@ class TransactionFile(object):
         number_data_blocks = metadata["number_data_blocks"]
         assert number_data_blocks > 0
         assert 256 * number_data_blocks == len(binary_data)
+        # remove fill bytes
+        binary_data = self._remove_fill_bytes(binary_data, number_data_blocks)
         self._check_complete_feed_line(metadata, binary_data[:80])
         self._read_version_record(metadata, binary_data[80:93])
         end_index = 93 - 1
-        start_index = end_index
+        start_index = end_index + 1
         while (start_index < len(binary_data)) and \
             (self.more_posting_lines(binary_data, start_index)):
             line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
             self.lines.append(line)
             start_index = end_index + 1
-        end_index = self._check_client_total(binary_data, end_index)
+        end_index = self._check_client_total(binary_data, end_index+1)
         index = end_index + 1
         while index + 1 < len(binary_data):
             assert '\x00' == binary_data[index]
