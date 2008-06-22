@@ -13,12 +13,10 @@ from controlrecord import ControlRecord
 from postingline import PostingLine
 from transactionmanager import TransactionManager
 from transactionfile import TransactionFile
-from knewriter import KneWriter
+from knewriter import KneWriter, product_abbreviation
 from knereader import KneReader
 from knefilereader import KneFileReader
 
-
-product_abbreviation = "SELF"
 
 
 """
