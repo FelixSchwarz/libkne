@@ -99,6 +99,7 @@ class PostingLine(object):
     def _parse_posting_text(self, data, start_index):
         index = start_index
         if data[start_index] == '\x1e':
+            print data[start_index:start_index+50]
             index = start_index + 1
             while data[index] != '\x1c' and index < start_index + 30 - 1:
                 index += 1
