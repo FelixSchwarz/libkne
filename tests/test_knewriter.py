@@ -230,4 +230,8 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         self._assemble_data()
         self.reader = KneReader(self.header_fp, [self.data_fp])
 
+        tfile = self.reader.get_file(0)
+        lines = tfile.get_posting_lines()
+        self.assertEqual(1, len(lines))
+        line = lines[0]
 
