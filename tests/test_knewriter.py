@@ -43,8 +43,8 @@ def _build_posting_line(**kwargs):
     line.record_field2 = "150102"
     line.date = datetime.date(day=1, month=1, year=2008)
     line.account_number = 84000000
-    line.posting_text = "AR mit UST-Automatikkonto"
-    line.currency_code_transaction_volume = "EUR"
+    line.posting_text = 'AR mit UST-Automatikkonto'
+    line.currency_code_transaction_volume = 'EUR'
     for key in kwargs:
         if hasattr(line, key):
             setattr(line, key, kwargs[key])
@@ -232,6 +232,14 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
 
         tfile = self.reader.get_file(0)
         lines = tfile.get_posting_lines()
-        self.assertEqual(1, len(lines))
-        line = lines[0]
+        self.assertEqual(2, len(lines))
+        line1 = lines[0]
+        self.assertEqual(Decimal(-115), line1.transaction_volume)
+        self.assertEqual(100010000, line1.offsetting_account)
+        self.assertEqual('Re526100910', line1.record_field1)
+        self.assertEqual('150102', line1.record_field2)
+        self.assertEqual(datetime.date(2004, 01, 01), line1.date)
+        self.assertEqual(84000000, line1.account_number)
+        self.assertEqual('AR mit UST-Automatikkonto', line1.posting_text)
+        self.assertEqual('EUR', line1.currency_code_transaction_volume)
 
