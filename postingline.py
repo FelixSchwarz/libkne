@@ -15,6 +15,8 @@ class PostingLine(object):
         self.record_field2 = None
         self.date = None
         self.account_number = None
+        self.cost_center1 = None
+        self.cost_center2 = None
         self.cash_discount = None
         self.posting_text = None
         self.eu_id = None
@@ -97,16 +99,33 @@ class PostingLine(object):
     
     
     def _parse_posting_text(self, data, start_index):
-        index = start_index
+        end_index = start_index
         if data[start_index] == '\x1e':
-            index = start_index + 1
-            max_end_index = index + 30 - 1
-            while data[index] != '\x1c' and index <= max_end_index:
-                index += 1
-            assert data[index] == '\x1c', repr(data[index])
-            text = data[start_index+1:index]
+            end_index = start_index + 1
+            max_end_index = end_index + 30 - 1
+            while data[end_index] != '\x1c' and end_index <= max_end_index:
+                end_index += 1
+            assert data[end_index] == '\x1c', repr(data[end_index])
+            text = data[start_index+1:end_index]
             self.posting_text = text.decode('datev_ascii')
-        return index
+            return end_index
+        else:
+            return start_index - 1
+    
+    
+    def _parse_cost_center(self, data, start_index):
+        end_index = start_index
+        if data[start_index] == '\xbb':
+            end_index = start_index + 1
+            max_end_index = end_index + 8 - 1
+            while data[end_index] != '\x1c' and end_index <= max_end_index:
+                end_index += 1
+            assert data[end_index] == '\x1c', repr(data[end_index])
+            text = data[start_index+1:end_index]
+            self.cost_center1 = text
+            return end_index
+        else:
+            return start_index - 1
     
     
     def _parse_currency_code(self, data, start_index):
@@ -131,6 +150,7 @@ class PostingLine(object):
         end_index = line._parse_record_field(data, end_index+1, '\xbe', 'record_field2')
         end_index = line._parse_transaction_date(data, end_index+1, metadata)
         end_index = line._parse_account(data, end_index+1)
+        end_index = line._parse_cost_center(data, end_index+1)
         end_index = line._parse_posting_text(data, end_index+1)
         end_index = line._parse_currency_code(data, end_index+1)
         #print repr(data[end_index-2:])
@@ -179,6 +199,8 @@ class PostingLine(object):
     
     def to_binary(self):
         "Return the binary KNE format for the specified data."
+        assert self.cost_center1 == None # not yet implemented
+        assert self.cost_center2 == None # not yet implemented
         bin_line = self._transaction_volume_to_binary()
         assert self.offsetting_account != None
         bin_line += 'a' + str(self.offsetting_account)

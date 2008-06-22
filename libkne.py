@@ -41,6 +41,7 @@ Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
                               stored general ledger account number length
 Konto                         account
+Kostenstelle (KOST)           cost center
 Mandantenendsumme             client total
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
