@@ -7,4 +7,7 @@ accounting number       1
 
 created by LX-Office (Demo Server) on 15.06.2008
 
+The data file was manually fixed due to wrong date formats in the DATEV export
+by LX-Office (see ). The DATEV check utility did not report any warnings for 
+the manually fixed files.
 

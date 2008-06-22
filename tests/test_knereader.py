@@ -75,7 +75,4 @@ class TestKneReaderLxOffice(unittest.TestCase):
         self.assertEqual(1000, line.account_number)
         self.assertEqual('Wasserspiel GmbH', line.posting_text)
         self.assertEqual('EUR', line.currency_code_transaction_volume)
-        
-        
-    # Check the posting lines
 
