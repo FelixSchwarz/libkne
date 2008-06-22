@@ -99,9 +99,9 @@ class PostingLine(object):
     def _parse_posting_text(self, data, start_index):
         index = start_index
         if data[start_index] == '\x1e':
-            print data[start_index:start_index+50]
             index = start_index + 1
-            while data[index] != '\x1c' and index < start_index + 30 - 1:
+            max_end_index = index + 30 - 1
+            while data[index] != '\x1c' and index <= max_end_index:
                 index += 1
             assert data[index] == '\x1c', repr(data[index])
             text = data[start_index+1:index]
@@ -110,7 +110,7 @@ class PostingLine(object):
     
     
     def _parse_currency_code(self, data, start_index):
-        assert '\xb3' == data[start_index]
+        assert '\xb3' == data[start_index], repr(data[start_index])
         index = start_index + 1
         while data[index] != '\x1c' and index <= start_index + 3:
             index += 1
