@@ -5,6 +5,9 @@ import datetime
 import re
 
 from util import get_number_of_decimal_places, parse_number
+# get_number_of_decimal_places, parse_number
+
+__all__ = ["PostingLine"]
 
 class PostingLine(object):
     def __init__(self):

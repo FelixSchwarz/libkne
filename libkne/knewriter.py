@@ -6,6 +6,7 @@ from transactionmanager import TransactionManager
 
 product_abbreviation = "SELF"
 
+__all__ = ["KneWriter"]
 
 class KneWriter(object):
     

@@ -2,6 +2,8 @@
 
 from transactionfile import TransactionFile
 
+__all__ = ["KneReader"]
+
 class KneReader(object):
     
     def __init__(self, header_fp=None, data_fps=None):

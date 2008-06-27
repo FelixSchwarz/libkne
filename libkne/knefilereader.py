@@ -4,6 +4,8 @@ from StringIO import StringIO
 
 from knereader import KneReader
 
+__all__ = ["KneFileReader"]
+
 class KneFileReader(KneReader):
     "Reads the data from the file system and passes them to the KneReader"
     
