@@ -70,13 +70,13 @@ class PostingLine(object):
                 record_field = match.group(1)
                 setattr(self, attr_name, record_field)
                 end_index = start + len(record_field) - 1 + 1
-            return end_index
-        else:
-            return start_index - 1
+                return end_index
+            assert False, 'Could not parse record field: ' + repr(data[start:(start+12)])
+        return start_index - 1
     
     
     def _parse_transaction_date(self, data, start_index, metadata):
-        assert 'd' == data[start_index]
+        assert 'd' == data[start_index], repr(data[start_index])
         date_number, end_index = parse_number(data, start_index+1, start_index+5)
         
         day = int(str(date_number)[:-2])

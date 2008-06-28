@@ -208,7 +208,7 @@ class TransactionFile(object):
         assert stored_general_ledger_account_no_length >= used_general_ledger_account_no_length
         assert ',' == binary_data[6]
         product_abbreviation = binary_data[7:11]
-        assert re.match('^\w{4}$', product_abbreviation)
+        assert re.match('^[\w0-9\-]{4}$', product_abbreviation), repr(product_abbreviation)
         self.config['product_abbreviation'] = product_abbreviation
         assert '\x1c' == binary_data[11]
         assert 'y' == binary_data[12]
