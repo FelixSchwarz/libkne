@@ -4,7 +4,7 @@ import datetime
 import re
 
 __all__ = ["_short_date", "product_abbreviation", "get_number_of_decimal_places",
-           "parse_short_date", "parse_number"]
+           "parse_short_date", "parse_number", 'parse_string_field']
 
 product_abbreviation = "lkne"
 
@@ -77,3 +77,15 @@ def parse_number(data, start_index, max_end_index):
     end_index = start_index + len(string_number) - 1
     return (int(string_number), end_index)
 
+
+def parse_string_field(data, start_index, max_end_index):
+    '''Reads all characters until \x1c is read or max_end_index is reached.'''
+    read_string = ''
+    for i in range(start_index, max_end_index+1+1):
+        if data[i] == '\x1c':
+            break
+        read_string += data[i]
+    assert '\x1c' == data[i], repr(data[i])
+    end_index = start_index + len(read_string) - 1 + 1
+    return (read_string, end_index)
+    

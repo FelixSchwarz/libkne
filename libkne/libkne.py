@@ -23,6 +23,7 @@ Anwendungsinfo                application info
 Anwendungsnummer              application number
 Aufgezeichnete Sachkontonummernlänge
                               used general ledger account number length
+Basiswährung                  base currency
 Basiswährungsbetrag           base currency amount
 Belegfeld                     record field
 Beraternummer                 advisor number

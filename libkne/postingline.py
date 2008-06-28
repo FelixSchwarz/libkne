@@ -4,8 +4,7 @@ from decimal import Decimal
 import datetime
 import re
 
-from util import get_number_of_decimal_places, parse_number
-# get_number_of_decimal_places, parse_number
+from util import get_number_of_decimal_places, parse_number, parse_string_field
 
 __all__ = ["PostingLine"]
 
@@ -20,15 +19,16 @@ class PostingLine(object):
         self.account_number = None
         self.cost_center1 = None
         self.cost_center2 = None
-        self.cash_discount = None
+        self.cash_discount = None           # TODO: Write to binary
         self.posting_text = None
         self.eu_id = None
         self.eu_state = None
         self.vat_id = None
         self.eu_taxrate = None
         self.currency_code_transaction_volume = None
-        self.base_currency_amount = None
-        self.exchange_rate = None
+        self.base_currency_amount = None    # TODO: Write to binary!
+        self.base_currency = None           # TODO: Write to binary!
+        self.exchange_rate = None           # TODO: Write to binary!
         
         char_re = "([^0-9a-zA-Z\$%&*\+-/])"
         self.record_field_valid_characters = re.compile(char_re)
@@ -101,8 +101,16 @@ class PostingLine(object):
         return end_index
     
     
+    def _parse_cash_discount(self, data, start_index):
+        if data[start_index] == 'h':
+            start = start_index + 1
+            cash_discount, end_index = parse_number(data, start, start+10)
+            self.cash_discount = Decimal(cash_discount) / Decimal(10)
+            return end_index
+        return start_index - 1
+    
+    
     def _parse_posting_text(self, data, start_index):
-        end_index = start_index
         if data[start_index] == '\x1e':
             end_index = start_index + 1
             max_end_index = end_index + 30 - 1
@@ -112,12 +120,10 @@ class PostingLine(object):
             text = data[start_index+1:end_index]
             self.posting_text = text.decode('datev_ascii')
             return end_index
-        else:
-            return start_index - 1
+        return start_index - 1
     
     
     def _parse_cost_center(self, data, start_index):
-        end_index = start_index
         if data[start_index] == '\xbb':
             end_index = start_index + 1
             max_end_index = end_index + 8 - 1
@@ -127,8 +133,7 @@ class PostingLine(object):
             text = data[start_index+1:end_index]
             self.cost_center1 = text
             return end_index
-        else:
-            return start_index - 1
+        return start_index - 1
     
     
     def _parse_currency_code(self, data, start_index):
@@ -140,6 +145,33 @@ class PostingLine(object):
         code = data[start_index+1:index].upper()
         self.currency_code_transaction_volume = code
         return index
+    
+    
+    def _parse_base_currency_amount(self, data, start_index):
+        if data[start_index] == 'm':
+            start = start_index + 1
+            base_currency_amount, end_index = parse_number(data, start, start+12)
+            self.base_currency_amount = Decimal(base_currency_amount) / Decimal(100)
+            return end_index
+        return start_index - 1
+    
+    
+    def _parse_base_currency(self, data, start_index):
+        if data[start_index] == '\xb4':
+            start = start_index + 1
+            base_currency, end_index = parse_string_field(data, start, start+3)
+            self.base_currency = base_currency
+            return end_index
+        return start_index - 1
+    
+    
+    def _parse_exchange_rate(self, data, start_index):
+        if data[start_index] == 'n':
+            start = start_index + 1
+            exchange_rate, end_index = parse_number(data, start, start+11)
+            self.exchange_rate = Decimal(exchange_rate) / Decimal(1000000)
+            return end_index
+        return start_index - 1
     
     
     @classmethod
@@ -154,10 +186,14 @@ class PostingLine(object):
         end_index = line._parse_transaction_date(data, end_index+1, metadata)
         end_index = line._parse_account(data, end_index+1)
         end_index = line._parse_cost_center(data, end_index+1)
+        end_index = line._parse_cash_discount(data, end_index+1)
         end_index = line._parse_posting_text(data, end_index+1)
         end_index = line._parse_currency_code(data, end_index+1)
+        end_index = line._parse_base_currency_amount(data, end_index+1)
+        end_index = line._parse_base_currency(data, end_index+1)
+        end_index = line._parse_exchange_rate(data, end_index+1)
         #print repr(data[end_index-2:])
-        assert 'y' == data[end_index + 1]
+        assert 'y' == data[end_index + 1], repr(data[end_index + 1:])
         end_index += 1
         return (line, start_index + end_index)
     
