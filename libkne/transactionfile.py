@@ -164,7 +164,7 @@ class TransactionFile(object):
         assert binary_data[0] == '\x1d', repr(binary_data[0])
         assert binary_data[1] == '\x18'
         assert binary_data[2] == '1'
-        assert metadata['file_no'] == int(binary_data[3:6])
+        assert metadata['file_no'] == int(binary_data[3:6]), repr(binary_data[3:6])
         assert 11 == int(binary_data[6:8]) # FIBU/OPOS transaction data
         assert metadata['name_abbreviation'] == binary_data[8:10]
         assert metadata['advisor_number'] == int(binary_data[10:17])
@@ -177,9 +177,10 @@ class TransactionFile(object):
         assert metadata['date_end'] == date_end
         assert metadata['prima_nota_page'] == int(binary_data[40:43])
         assert metadata['password'] == binary_data[43:47]
-        # Specification says "Anwendungsinfo"/"Konstante" - maybe this is a 
-        # field which can be used arbitrarily?
-        assert ' ' * 16 == binary_data[47:63]
+        if ' ' * 16 == binary_data[47:63]:
+            metadata['application_info'] = ''
+        else:
+            metadata['application_info'] = binary_data[47:63].strip()
         # Specification says "Input-Info"/"Konstante" - maybe this is a 
         # field which can be used arbitrarily?
         assert ' ' * 16 == binary_data[63:79]

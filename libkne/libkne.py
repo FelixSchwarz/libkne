@@ -19,6 +19,7 @@ Translation terms used within this library
 Deutsch/German                Englisch/English
 -----------------------------------------------------------------
 Abrechnungsnummer             accounting number
+Anwendungsinfo                application info
 Anwendungsnummer              application number
 Aufgezeichnete Sachkontonummernlänge
                               used general ledger account number length
