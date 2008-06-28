@@ -8,8 +8,6 @@ import unittest
 
 from libkne import KneWriter, KneReader, PostingLine
 
-# TODO: Kann man auch lkne statt SELF verwenden?
-
 def _default_config():
     config = {}
     config["advisor_number"] = 1234567
@@ -154,7 +152,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
                        '00001' + '00001' + (' ' * 95)
         control_record = 'V' + '00001' + '11' + 'FS' + '1234567' + '00042' + \
                          '000108' + '0000040204' + '290204' + '001' + '    ' + \
-                         '00002' + '001' + ' ' + '1' + '1,8,8,SELF    ' + \
+                         '00002' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
                          (' ' * 53)
         self.assertEqual(128, len(control_record))
         expected_binary = data_carrier + control_record
@@ -177,7 +175,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         
     
     def _check_version_string(self, binary_data):
-        expected_version_string = '\xb5' + '1,8,8,SELF' + '\x1c' + 'y'
+        expected_version_string = '\xb5' + '1,8,8,lkne' + '\x1c' + 'y'
         self.assertEqual(13, len(expected_version_string))
         #print repr(expected_version_string)
         #print repr(binary_data)

@@ -6,7 +6,7 @@ import re
 __all__ = ["_short_date", "product_abbreviation", "get_number_of_decimal_places",
            "parse_short_date", "parse_number"]
 
-product_abbreviation = "SELF"
+product_abbreviation = "lkne"
 
 def _short_date(date):
     format = "%02d%02d%02d"
