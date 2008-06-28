@@ -2,6 +2,8 @@
 
 from util import parse_short_date, _short_date
 
+__all__ = ["ControlRecord"]
+
 class ControlRecord(object):
     "Control record after data carrier header in the control file"
     def __init__(self):

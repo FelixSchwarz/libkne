@@ -3,10 +3,10 @@
 import datetime
 
 from transactionmanager import TransactionManager
-
-product_abbreviation = "SELF"
+from util import product_abbreviation
 
 __all__ = ["KneWriter"]
+
 
 class KneWriter(object):
     

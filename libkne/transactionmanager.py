@@ -1,7 +1,8 @@
 # -*- coding: UTF-8 -*-
 
 from transactionfile import TransactionFile
-from util import _short_date
+
+__all__ = ["TransactionManager"]
 
 class TransactionManager(object):
     

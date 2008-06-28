@@ -1,10 +1,13 @@
 # -*- coding: UTF-8 -*-
 
 import math
+import re
 
 from controlrecord import ControlRecord
 from postingline import PostingLine
 from util import parse_short_date, _short_date, parse_number
+
+__all__ = ["TransactionFile"]
 
 class TransactionFile(object):
     
@@ -204,8 +207,9 @@ class TransactionFile(object):
             stored_general_ledger_account_no_length
         assert stored_general_ledger_account_no_length >= used_general_ledger_account_no_length
         assert ',' == binary_data[6]
-        # Specification says: "Produktkürzel"/"Konstante"
-        assert 'SELF' == binary_data[7:11]
+        product_abbreviation = binary_data[7:11]
+        assert re.match('^\w{4}$', product_abbreviation)
+        self.config['product_abbreviation'] = product_abbreviation
         assert '\x1c' == binary_data[11]
         assert 'y' == binary_data[12]
     

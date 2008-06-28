@@ -8,20 +8,26 @@ import unittest
 
 from libkne import KneFileReader
 
-
-class TestKneReaderLxOffice(unittest.TestCase):
+class SampleDataReaderCase(unittest.TestCase):
     def get_data_filenames(self, datadir):
         file_dir = os.path.dirname(__file__)
+        datadir = os.path.join('testdata', datadir)
         abs_dir = os.path.abspath(os.path.join(file_dir, datadir))
         header = os.path.join(abs_dir, 'EV01')
         data_fp = os.path.join(abs_dir, 'ED00001')
         return (header, [data_fp])
     
     
-    def setUp(self):
-        datadir = os.path.join('testdata', 'lxoffice')
+    def setUp(self, datadir):
+        super(SampleDataReaderCase, self).setUp()
         header, data_fps = self.get_data_filenames(datadir)
         self.reader = KneFileReader(header, data_fps)
+
+
+
+class TestKneReaderLxOffice(SampleDataReaderCase):
+    def setUp(self):
+        super(TestKneReaderLxOffice, self).setUp('lxoffice')
     
     
     def test_read_global_config(self):
@@ -41,7 +47,7 @@ class TestKneReaderLxOffice(unittest.TestCase):
         self.assertEqual(True, meta['do_process'])
         self.assertEqual(1, meta['file_no'])
         self.assertEqual(11, meta['application_number'])
-        self.assertEqual('00', meta['name_abbreviation']) # VERIFY DATA FILE!
+        self.assertEqual('00', meta['name_abbreviation'])
         self.assertEqual(471156, meta['advisor_number'])
         self.assertEqual(42212, meta['client_number'])
         self.assertEqual(11, meta['accounting_number'])
