@@ -10,7 +10,8 @@ from test_knereader_lxoffice import SampleDataReaderCase
 
 class TestKneReaderMonkeyKassenbuch(SampleDataReaderCase):
     def setUp(self):
-        super(TestKneReaderMonkeyKassenbuch, self).setUp('monkey_kassenbuch')
+        datadir = 'monkey_kassenbuch_transactions'
+        super(TestKneReaderMonkeyKassenbuch, self).setUp(datadir)
     
     def test_product_abbreviation(self):
         self.assertEqual(1, self.reader.get_number_of_files())
@@ -34,7 +35,7 @@ class TestKneReaderMonkeyKassenbuch(SampleDataReaderCase):
 
 class TestKneReaderMMSKassenbuch(SampleDataReaderCase):
     def setUp(self):
-        super(TestKneReaderMMSKassenbuch, self).setUp('mms_kassenbuch')
+        super(TestKneReaderMMSKassenbuch, self).setUp('mms_kassenbuch_transactions')
     
     def test_product_abbreviation(self):
         self.assertEqual(1, self.reader.get_number_of_files())

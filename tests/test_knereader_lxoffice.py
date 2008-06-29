@@ -30,7 +30,7 @@ class SampleDataReaderCase(unittest.TestCase):
 
 class TestKneReaderLxOffice(SampleDataReaderCase):
     def setUp(self):
-        super(TestKneReaderLxOffice, self).setUp('lxoffice')
+        super(TestKneReaderLxOffice, self).setUp('lxoffice_transactions')
     
     
     def test_read_global_config(self):
