@@ -8,34 +8,9 @@ import unittest
 from test_knereader_lxoffice import SampleDataReaderCase
 
 
-class TestKneReaderMonkeyKassenbuch(SampleDataReaderCase):
+class TestKneReaderMasterDataMMS(SampleDataReaderCase):
     def setUp(self):
-        datadir = 'monkey_kassenbuch_transactions'
-        super(TestKneReaderMonkeyKassenbuch, self).setUp(datadir)
-    
-    def test_product_abbreviation(self):
-        self.assertEqual(1, self.reader.get_number_of_files())
-        config = self.reader.get_config()
-        self.assertEqual('MKEY', config['product_abbreviation'])
-
-
-
-# TZ EasyBuch has many format errors, they are not reliable and there much too
-# many errors to fix them myself.
-#class TestKneReaderTZEasyBuch(SampleDataReaderCase):
-#    def setUp(self):
-#        super(TestKneReaderTZEasyBuch, self).setUp('tz_easybuch')
-#    
-#    def test_product_abbreviation(self):
-#        self.assertEqual(1, self.reader.get_number_of_files())
-#        config = self.reader.get_config()
-#        self.assertEqual('-TZB', config['product_abbreviation'])
-
-
-
-class TestKneReaderMMSKassenbuch(SampleDataReaderCase):
-    def setUp(self):
-        super(TestKneReaderMMSKassenbuch, self).setUp('mms_kassenbuch_transactions')
+        super(TestKneReaderMasterDataMMS, self).setUp('mms_bilanz_addresses')
     
     def test_product_abbreviation(self):
         self.assertEqual(1, self.reader.get_number_of_files())

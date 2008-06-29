@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 
-from util import parse_short_date, _short_date
+from util import APPLICATION_NUMBER_TRANSACTION_DATA, \
+    APPLICATION_NUMBER_MASTER_DATA, parse_short_date, _short_date
+
 
 __all__ = ['ControlRecord']
 
@@ -23,23 +25,35 @@ class ControlRecord(object):
         self.number_of_blocks = None
         self.meta = None
     
+    def describes_transaction_data(self):
+        return self.meta['application_number'] == APPLICATION_NUMBER_TRANSACTION_DATA
+    
+    def describes_master_data(self):
+        return self.meta['application_number'] == APPLICATION_NUMBER_MASTER_DATA
     
     def from_binary(self, binary_data):
         assert self.meta == None
         assert len(binary_data) == 128
         assert binary_data[0] in ['V', '*']
-        meta = {}
+        self.meta = {}
+        meta = self.meta
         meta['do_process'] = (binary_data[0] == 'V')
         meta['file_no'] = int(binary_data[1:6])
-        meta['application_number'] = int(binary_data[6:8]) # TODO -> 11?
+        application_number = int(binary_data[6:8])
+        assert application_number in [APPLICATION_NUMBER_TRANSACTION_DATA,
+                                      APPLICATION_NUMBER_MASTER_DATA]
+        meta['application_number'] = application_number
         meta['name_abbreviation'] = binary_data[8:10]
         meta['advisor_number'] = int(binary_data[10:17])
         meta['client_number'] = int(binary_data[17:22])
         meta['accounting_number'] = int(binary_data[22:26])
         meta['accounting_year'] = int(binary_data[26:28])
-        assert '0' * 4 == binary_data[28:32]
-        meta['date_start'] = parse_short_date(binary_data[32:38])
-        meta['date_end'] = parse_short_date(binary_data[38:44])
+        if self.describes_transaction_data():
+            assert '0' * 4 == binary_data[28:32], repr(binary_data[28:32])
+            meta['date_start'] = parse_short_date(binary_data[32:38])
+            meta['date_end'] = parse_short_date(binary_data[38:44])
+        else:
+            assert ' ' * (4 + 6 + 6) == binary_data[28:44], repr(binary_data[28:44])
         meta['prima_nota_page'] = int(binary_data[44:47])
         meta['password'] = binary_data[47:51]
         meta['number_data_blocks'] = int(binary_data[51:56])
@@ -53,7 +67,6 @@ class ControlRecord(object):
         assert binary_data[71:75] == '    '
         assert ' ' * 53 == binary_data[75:128]
         
-        self.meta = meta
         return meta
     
     

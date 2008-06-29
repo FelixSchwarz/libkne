@@ -3,8 +3,13 @@
 import datetime
 import re
 
-__all__ = ['_short_date', 'product_abbreviation', 'get_number_of_decimal_places',
+__all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA', 
+           'APPLICATION_NUMBER_MASTER_DATA', '_short_date', 
+           'product_abbreviation', 'get_number_of_decimal_places',
            'parse_short_date', 'parse_number', 'parse_string_field']
+
+APPLICATION_NUMBER_TRANSACTION_DATA = 11
+APPLICATION_NUMBER_MASTER_DATA      = 13
 
 product_abbreviation = 'lkne'
 

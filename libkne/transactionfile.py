@@ -9,6 +9,8 @@ from util import parse_short_date, _short_date, parse_number
 
 __all__ = ['TransactionFile']
 
+
+# TODO: Rename TransactionFile -> DataFile
 class TransactionFile(object):
     
     def __init__(self, config, version_identifier=None):
@@ -109,7 +111,7 @@ class TransactionFile(object):
     
     
     def contains_transaction_data(self):
-        return self.transaction_data
+        return self.cr.describes_transaction_data()
     
     
     def _compute_number_of_fill_bytes(self):
@@ -159,40 +161,48 @@ class TransactionFile(object):
         return filtered_data
     
     
-    def _check_complete_feed_line(self, metadata, binary_data):
+    def _check_feed_line(self, metadata, binary_data):
         assert len(binary_data) == 80
         assert binary_data[0] == '\x1d', repr(binary_data[0])
         assert binary_data[1] == '\x18'
         assert binary_data[2] == '1'
         assert metadata['file_no'] == int(binary_data[3:6]), repr(binary_data[3:6])
-        assert 11 == int(binary_data[6:8]) # FIBU/OPOS transaction data
+        application_number = int(binary_data[6:8])
+        application_number_cr = self.cr.parsed_data()['application_number']
+        assert application_number == application_number_cr, application_number
         assert metadata['name_abbreviation'] == binary_data[8:10]
         assert metadata['advisor_number'] == int(binary_data[10:17])
         assert metadata['client_number'] == int(binary_data[17:22])
         assert metadata['accounting_number'] == int(binary_data[22:26])
         assert metadata['accounting_year'] == int(binary_data[26:28])
-        date_start = parse_short_date(binary_data[28:34])
-        assert metadata['date_start'] == date_start
-        date_end = parse_short_date(binary_data[34:40])
-        assert metadata['date_end'] == date_end
-        assert metadata['prima_nota_page'] == int(binary_data[40:43])
-        assert metadata['password'] == binary_data[43:47]
-        if ' ' * 16 == binary_data[47:63]:
+        if self.cr.describes_transaction_data():
+            date_start = parse_short_date(binary_data[28:34])
+            assert metadata['date_start'] == date_start
+            date_end = parse_short_date(binary_data[34:40])
+            assert metadata['date_end'] == date_end
+            assert metadata['prima_nota_page'] == int(binary_data[40:43])
+            index = 43
+        else:
+            index = 28
+        assert metadata['password'] == binary_data[index:index+4]
+        if ' ' * 16 == binary_data[index+4:index+20]:
             metadata['application_info'] = ''
         else:
-            metadata['application_info'] = binary_data[47:63].strip()
+            metadata['application_info'] = binary_data[index+4:index+20].strip()
         # Specification says 'Input-Info'/'Konstante' - maybe this is a 
         # field which can be used arbitrarily?
-        assert ' ' * 16 == binary_data[63:79]
-        assert 'y' == binary_data[79]
+        input_info = binary_data[index+20:index+36]
+        assert ' ' * 16 == input_info, repr(input_info)
+        assert 'y' == binary_data[index+36]
+        return index + 36
     
     
     def _read_version_record(self, metadata, binary_data):
         assert len(binary_data) == 13
-        if '\xb5' == binary_data[0]:
-            self.transaction_data = True
+        if self.cr.describes_transaction_data():
+            assert '\xb5' == binary_data[0], repr(binary_data[0])
         else:
-            assert False
+            assert '\xb6' == binary_data[0], repr(binary_data[0])
         assert '1' == binary_data[1]
         assert ',' == binary_data[2]
         used_general_ledger_account_no_length = int(binary_data[3])
@@ -230,6 +240,21 @@ class TransactionFile(object):
         return end_index + 2
     
     
+    def _parse_transactions(self, binary_data, start_index, metadata):
+        while (start_index < len(binary_data)) and \
+            (self.more_posting_lines(binary_data, start_index)):
+            line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
+            self.lines.append(line)
+            start_index = end_index + 1
+        end_index = self._check_client_total(binary_data, end_index+1)
+        return end_index
+    
+    
+    def _parse_master_data(self, binary_data, start_index):
+        # TODO
+        return None
+    
+    
     def from_binary(self, binary_control_record, data_fp):
         '''Takes a binary control record and a file-like object which contains
         the data and parses them.'''
@@ -241,19 +266,15 @@ class TransactionFile(object):
         number_data_blocks = metadata['number_data_blocks']
         assert number_data_blocks > 0
         assert 256 * number_data_blocks == len(binary_data)
-        # remove fill bytes
         binary_data = self._remove_fill_bytes(binary_data, number_data_blocks)
-        self._check_complete_feed_line(metadata, binary_data[:80])
-        self._read_version_record(metadata, binary_data[80:93])
-        end_index = 93 - 1
-        start_index = end_index + 1
-        while (start_index < len(binary_data)) and \
-            (self.more_posting_lines(binary_data, start_index)):
-            line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
-            self.lines.append(line)
-            start_index = end_index + 1
-        end_index = self._check_client_total(binary_data, end_index+1)
-        index = end_index + 1
+        end_index = self._check_feed_line(metadata, binary_data[:80])
+        self._read_version_record(metadata, binary_data[end_index+1:end_index+14])
+        start_index = end_index + 13 + 1
+        if self.cr.describes_transaction_data():
+            start_index = self._parse_transactions(binary_data, start_index, metadata)
+        else:
+            start_index = self._parse_master_data(binary_data, start_index)
+        index = start_index + 1
         while index + 1 < len(binary_data):
             assert '\x00' == binary_data[index]
             index += 1
