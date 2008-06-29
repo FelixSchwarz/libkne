@@ -7,7 +7,7 @@ from controlrecord import ControlRecord
 from postingline import PostingLine
 from util import parse_short_date, _short_date, parse_number
 
-__all__ = ["TransactionFile"]
+__all__ = ['TransactionFile']
 
 class TransactionFile(object):
     
@@ -36,7 +36,7 @@ class TransactionFile(object):
             bin_total = 'w'
         int_total = abs(int(100 * client_sum_total))
         
-        bin_total += "%014d" % int_total 
+        bin_total += '%014d' % int_total 
         bin_total += 'y' + 'z'
         return bin_total
     
@@ -46,19 +46,19 @@ class TransactionFile(object):
         new_feed = '\x18'
         
         bin_line = start_feed_line + new_feed
-        bin_line += self.config["version_complete_feed_line"]
-        bin_line += "%03d" % self.config["data_carrier_number"]
-        bin_line += self.config["application_number"]
-        bin_line += self.config["name_abbreviation"]
-        bin_line += self.config["advisor_number"]
-        bin_line += self.config["client_number"]
-        bin_line += self.config["accounting_number"] + str(self.config["accounting_year"])[2:]
-        bin_line += _short_date(self.config["date_start"])
-        bin_line += _short_date(self.config["date_end"])
-        bin_line += self.config["prima_nota_page"]
-        bin_line += self.config["password"]
-        bin_line += self.config["application_info"]
-        bin_line += self.config["input_info"]
+        bin_line += self.config['version_complete_feed_line']
+        bin_line += '%03d' % self.config['data_carrier_number']
+        bin_line += self.config['application_number']
+        bin_line += self.config['name_abbreviation']
+        bin_line += self.config['advisor_number']
+        bin_line += self.config['client_number']
+        bin_line += self.config['accounting_number'] + str(self.config['accounting_year'])[2:]
+        bin_line += _short_date(self.config['date_start'])
+        bin_line += _short_date(self.config['date_end'])
+        bin_line += self.config['prima_nota_page']
+        bin_line += self.config['password']
+        bin_line += self.config['application_info']
+        bin_line += self.config['input_info']
         bin_line += 'y'
         assert len(bin_line) == 80
         return bin_line
@@ -81,10 +81,10 @@ class TransactionFile(object):
     
     
     def append_posting_line(self, line):
-        """Append a new posting line to this transaction file (only if 
+        '''Append a new posting line to this transaction file (only if 
         to_binary() was not called before on this file!). Return True if the 
         line was appended successfully else False. If False, no 
-        more lines can be appended to this file."""
+        more lines can be appended to this file.'''
         assert self.open_for_additions
         self.lines.append(line)
         return True
@@ -92,16 +92,16 @@ class TransactionFile(object):
     
     def build_control_record(self):
         cr = ControlRecord()
-        cr.application_number = self.config["application_number"]
-        cr.name_abbreviation = self.config["name_abbreviation"]
-        cr.advisor_number = self.config["advisor_number"]
-        cr.client_number = self.config["client_number"]
-        cr.accounting_number = self.config["accounting_number"]
-        cr.accounting_year = self.config["accounting_year"]
-        cr.date_start = self.config["date_start"]
-        cr.date_end = self.config["date_end"]
-        cr.prima_nota_page = self.config["prima_nota_page"]
-        cr.password = self.config["password"]
+        cr.application_number = self.config['application_number']
+        cr.name_abbreviation = self.config['name_abbreviation']
+        cr.advisor_number = self.config['advisor_number']
+        cr.client_number = self.config['client_number']
+        cr.accounting_number = self.config['accounting_number']
+        cr.accounting_year = self.config['accounting_year']
+        cr.date_start = self.config['date_start']
+        cr.date_end = self.config['date_end']
+        cr.prima_nota_page = self.config['prima_nota_page']
+        cr.password = self.config['password']
         
         cr.number_of_blocks = self.number_of_blocks
         self.cr = cr
@@ -181,7 +181,7 @@ class TransactionFile(object):
             metadata['application_info'] = ''
         else:
             metadata['application_info'] = binary_data[47:63].strip()
-        # Specification says "Input-Info"/"Konstante" - maybe this is a 
+        # Specification says 'Input-Info'/'Konstante' - maybe this is a 
         # field which can be used arbitrarily?
         assert ' ' * 16 == binary_data[63:79]
         assert 'y' == binary_data[79]
@@ -198,13 +198,13 @@ class TransactionFile(object):
         used_general_ledger_account_no_length = int(binary_data[3])
         assert used_general_ledger_account_no_length >= 4
         assert used_general_ledger_account_no_length <= 8
-        metadata["used_general_ledger_account_no_length"] = \
+        metadata['used_general_ledger_account_no_length'] = \
             used_general_ledger_account_no_length
         assert ',' == binary_data[4]
         stored_general_ledger_account_no_length = int(binary_data[5])
         assert stored_general_ledger_account_no_length >= 4
         assert stored_general_ledger_account_no_length <= 8
-        metadata["stored_general_ledger_account_no_length"] = \
+        metadata['stored_general_ledger_account_no_length'] = \
             stored_general_ledger_account_no_length
         assert stored_general_ledger_account_no_length >= used_general_ledger_account_no_length
         assert ',' == binary_data[6]
@@ -231,14 +231,14 @@ class TransactionFile(object):
     
     
     def from_binary(self, binary_control_record, data_fp):
-        """Takes a binary control record and a file-like object which contains
-        the data and parses them."""
+        '''Takes a binary control record and a file-like object which contains
+        the data and parses them.'''
         cr = ControlRecord()
         cr.from_binary(binary_control_record)
         self.cr = cr
         binary_data = data_fp.read()
         metadata = self.get_metadata()
-        number_data_blocks = metadata["number_data_blocks"]
+        number_data_blocks = metadata['number_data_blocks']
         assert number_data_blocks > 0
         assert 256 * number_data_blocks == len(binary_data)
         # remove fill bytes

@@ -2,10 +2,10 @@
 
 from util import parse_short_date, _short_date
 
-__all__ = ["ControlRecord"]
+__all__ = ['ControlRecord']
 
 class ControlRecord(object):
-    "Control record after data carrier header in the control file"
+    'Control record after data carrier header in the control file'
     def __init__(self):
         self.file_no = 1
         self.application_number = None
@@ -47,9 +47,9 @@ class ControlRecord(object):
         assert binary_data[59] == ' '
         assert binary_data[60] == '1'
         meta['version_info'] = binary_data[61:71]
-        # specification says "linksbündig, mit 4 Leerzeichen aufgefüllt."
+        # specification says 'linksbündig, mit 4 Leerzeichen aufgefüllt.'
         # is this really always 4 spaces or is this just the filling if you 
-        # use the "default"(?) "1,4,4,SELF"?
+        # use the 'default'(?) '1,4,4,SELF'?
         assert binary_data[71:75] == '    '
         assert ' ' * 53 == binary_data[75:128]
         
@@ -63,8 +63,8 @@ class ControlRecord(object):
     
     
     def to_binary(self, version_identifier):
-        "Return the binary KNE format for the specified data."
-        bin_line = 'V' + ("%05d" % self.file_no)
+        'Return the binary KNE format for the specified data.'
+        bin_line = 'V' + ('%05d' % self.file_no)
         bin_line += self.application_number
         bin_line += self.name_abbreviation
         bin_line += self.advisor_number
@@ -74,7 +74,7 @@ class ControlRecord(object):
         bin_line += _short_date(self.date_end)
         bin_line += self.prima_nota_page
         bin_line += self.password
-        bin_line += "%05d" % self.number_of_blocks
+        bin_line += '%05d' % self.number_of_blocks
         bin_line += self.prima_nota_page
         bin_line += ' ' + '1'
         bin_line += version_identifier + '    '

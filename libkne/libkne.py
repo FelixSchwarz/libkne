@@ -13,7 +13,7 @@ from knefilereader import *
 
 
 
-"""
+'''
 Translation terms used within this library
 
 Deutsch/German                Englisch/English
@@ -54,5 +54,5 @@ Vollvorlauf                   complete feed line
 Währungskennzeichen           currency code
 Währungskurs                  exchange rate
 Wirtschaftsjahr               financial year
-"""
+'''
 

@@ -3,18 +3,18 @@
 import datetime
 import re
 
-__all__ = ["_short_date", "product_abbreviation", "get_number_of_decimal_places",
-           "parse_short_date", "parse_number", 'parse_string_field']
+__all__ = ['_short_date', 'product_abbreviation', 'get_number_of_decimal_places',
+           'parse_short_date', 'parse_number', 'parse_string_field']
 
-product_abbreviation = "lkne"
+product_abbreviation = 'lkne'
 
 def _short_date(date):
-    format = "%02d%02d%02d"
+    format = '%02d%02d%02d'
     short_year = int(str(date.year)[2:])
     return format % (date.day, date.month, short_year)
 
 # ------------------------------------------------------------------------------
-sciformat_regex = re.compile("^(-?\d+(?:\.\d+)?)(?:E(\+\d+))?$")
+sciformat_regex = re.compile('^(-?\d+(?:\.\d+)?)(?:E(\+\d+))?$')
 def append_zeroes(old_number, dot_index, new_dot_index):
     numbers_after_dot = len(old_number) - dot_index
     new_number = old_number[:dot_index] + old_number[(dot_index+1):]
@@ -22,7 +22,7 @@ def append_zeroes(old_number, dot_index, new_dot_index):
         additional_zeroes = new_dot_index - numbers_after_dot
     else:
         additional_zeroes = new_dot_index - numbers_after_dot - 1
-    return new_number + ("0" * additional_zeroes)
+    return new_number + ('0' * additional_zeroes)
 
 
 def format_to_normal(dec):
@@ -35,24 +35,24 @@ def format_to_normal(dec):
     
     exponent = int(exponent)
     assert exponent > 0
-    if "." not in number:
-        return number + ("0" * exponent)
-    dot_index = number.index(".")
+    if '.' not in number:
+        return number + ('0' * exponent)
+    dot_index = number.index('.')
     new_dot_index = dot_index + exponent
     assert new_dot_index >= len(number)
     return append_zeroes(number, dot_index, new_dot_index)
 
 
 def get_number_of_decimal_places(number_string):
-    if "." in number_string:
-        dot_index = number_string.index(".")
+    if '.' in number_string:
+        dot_index = number_string.index('.')
         return len(number_string) - dot_index - 1
     return 0
 # ------------------------------------------------------------------------------
 
 
 def parse_short_date(binary_data):
-    '''Parses a short date with the format "DDMMJJ" into a real datetime.date.
+    '''Parses a short date with the format 'DDMMJJ' into a real datetime.date.
     Years lower than 60 are interpreted as 19xx, all other years as 20xx.'''
     assert len(binary_data) == 6, len(binary_data)
     day = int(binary_data[:2])

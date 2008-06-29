@@ -35,12 +35,12 @@ class TestKneReaderLxOffice(SampleDataReaderCase):
     
     def test_read_global_config(self):
         config = self.reader.get_config()
-        self.assertEqual(471156, config["advisor_number"])
-        self.assertEqual("Foo Bar", config["advisor_name"])
+        self.assertEqual(471156, config['advisor_number'])
+        self.assertEqual('Foo Bar', config['advisor_name'])
         
-        self.assertEqual(1, config["number_data_files"])
-        self.assertEqual(1, config["number_last_data_file"])
-        self.assertEqual(1, config["data_carrier_number"])
+        self.assertEqual(1, config['number_data_files'])
+        self.assertEqual(1, config['number_last_data_file'])
+        self.assertEqual(1, config['data_carrier_number'])
     
     
     def test_read_control_record(self):
@@ -67,8 +67,8 @@ class TestKneReaderLxOffice(SampleDataReaderCase):
         tfile = self.reader.get_file(0)
         self.assertTrue(tfile.contains_transaction_data())
         meta = tfile.get_metadata()
-        self.assertEqual(4, meta["used_general_ledger_account_no_length"])
-        self.assertEqual(4, meta["stored_general_ledger_account_no_length"])
+        self.assertEqual(4, meta['used_general_ledger_account_no_length'])
+        self.assertEqual(4, meta['stored_general_ledger_account_no_length'])
     
     
     def test_read_posting_line(self):

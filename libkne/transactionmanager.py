@@ -2,7 +2,7 @@
 
 from transactionfile import TransactionFile
 
-__all__ = ["TransactionManager"]
+__all__ = ['TransactionManager']
 
 class TransactionManager(object):
     
@@ -23,11 +23,11 @@ class TransactionManager(object):
     
     
     def finish(self):
-        """Write all transaction files using the data_fp_builder. No 
+        '''Write all transaction files using the data_fp_builder. No 
         transaction data may be appended after calling finish (although 
         finish() itself may be called multiple times.
         Return a list of control records. 
-        """
+        '''
         control_records = []
         for i, tf in enumerate(self.transaction_files):
             data_fp = self.data_fp_builder(i)

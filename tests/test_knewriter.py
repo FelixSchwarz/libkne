@@ -10,14 +10,14 @@ from libkne import KneWriter, KneReader, PostingLine
 
 def _default_config():
     config = {}
-    config["advisor_number"] = 1234567
-    config["advisor_name"] = 'Datev eG'
-    config["client_number"] = 42
+    config['advisor_number'] = 1234567
+    config['advisor_name'] = 'Datev eG'
+    config['client_number'] = 42
     
-    config["data_carrier_number"] = 1
-    config["name_abbreviation"] = "fs"
-    config["date_start"] = datetime.date(2004, 02, 04)
-    config["date_end"] = datetime.date(2004, 02, 29)
+    config['data_carrier_number'] = 1
+    config['name_abbreviation'] = 'fs'
+    config['date_start'] = datetime.date(2004, 02, 04)
+    config['date_end'] = datetime.date(2004, 02, 29)
     return config
 
 
@@ -37,8 +37,8 @@ def _build_posting_line(**kwargs):
     line = PostingLine()
     line.transaction_volume = -115
     line.offsetting_account = 100010000
-    line.record_field1 = "Re526100910"
-    line.record_field2 = "150102"
+    line.record_field1 = 'Re526100910'
+    line.record_field2 = '150102'
     line.date = datetime.date(day=1, month=1, year=2008)
     line.account_number = 84000000
     line.posting_text = 'AR mit UST-Automatikkonto'
@@ -80,7 +80,7 @@ class TestPostingLine(unittest.TestCase):
     
     
     def test_decimal_transaction_volume(self):
-        line = _build_posting_line(transaction_volume=Decimal("-43.12"))
+        line = _build_posting_line(transaction_volume=Decimal('-43.12'))
         expected_binary = '-4312' + self.posting_line_with_transaction_volume
         #print repr(expected_binary)
         #print repr(line.to_binary())
@@ -88,7 +88,7 @@ class TestPostingLine(unittest.TestCase):
     
     
     def test_invalid_decimal_transaction_volume(self):
-        line = _build_posting_line(transaction_volume=Decimal("43.124"))
+        line = _build_posting_line(transaction_volume=Decimal('43.124'))
         self.assertRaises(ValueError, line.to_binary)
     
     
@@ -101,12 +101,12 @@ class TestPostingLine(unittest.TestCase):
     
     
     def test_umlaut_encoding_in_posting_text(self):
-        umlauts = u"äöüßÄÖÜ!#\"#$%&"
+        umlauts = u'äöüßÄÖÜ!#\'#$%&'
         line = _build_posting_line(posting_text=umlauts + u'§' + u'€')
         binary_line = '-11500' + 'a' + '100010000' + '\xbd' + \
                       'Re526100910' + '\x1c' + '\xbe' + '150102' + \
                       '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
-                      umlauts.encode("CP437") + '\x15' + '\xfe' + '\x1c' + \
+                      umlauts.encode('CP437') + '\x15' + '\xfe' + '\x1c' + \
                       '\xb3' + 'EUR' + '\x1c' + 'y'
         #print repr(binary_line)
         #print repr(line.to_binary())

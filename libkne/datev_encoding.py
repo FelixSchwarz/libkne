@@ -1,13 +1,13 @@
 # -*- coding: UTF-8 -*-
-""" Datev Character Mapping Codec
+''' Datev Character Mapping Codec
 
-as defined by DATEV e.G. in SELF "Schnittstellen-Entwicklungsleitfaden",
+as defined by DATEV e.G. in SELF 'Schnittstellen-Entwicklungsleitfaden',
 version 3.3 (March 2007).
 
 Written by Felix Schwarz (felix.schwarz@oss.schwarz.eu).
 
 (c) Copyright 2008 Felix Schwarz.
-"""
+'''
 
 # ------------------------------------------------------------------------------
 # verbatim copy from Python's (version 2.4.4) encodings/cp437.py 
@@ -37,7 +37,7 @@ decoding_map = codecs.make_identity_dict(range(0x20,0x5b))
 decoding_map.update(codecs.make_identity_dict(range(0x5f,0x7b)))
 
 # ------------------------------------------------------------------------------
-# DATEV specifies its character set (named "ASCII table") on Fach 3, page 33.
+# DATEV specifies its character set (named 'ASCII table') on Fach 3, page 33.
 # The character set is somewhat similar to CP437 [1] but contains some 
 # modifications as the Euro glyph.
 #
@@ -74,10 +74,10 @@ decoding_map.update({
 encoding_map = codecs.make_encoding_map(decoding_map)
 
 def register():
-    """Register this codec in the standard Python codec registry. Afterwards you
-    can decode/encode strings using the codec name 'datev_ascii'."""
+    '''Register this codec in the standard Python codec registry. Afterwards you
+    can decode/encode strings using the codec name 'datev_ascii'.'''
     def is_datev(codec_name):
-        if codec_name == "datev_ascii":
+        if codec_name == 'datev_ascii':
             return getregentry()
         return None
     codecs.register(is_datev)

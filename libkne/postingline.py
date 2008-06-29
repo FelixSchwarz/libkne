@@ -6,7 +6,7 @@ import re
 
 from util import get_number_of_decimal_places, parse_number, parse_string_field
 
-__all__ = ["PostingLine"]
+__all__ = ['PostingLine']
 
 class PostingLine(object):
     def __init__(self):
@@ -30,7 +30,7 @@ class PostingLine(object):
         self.base_currency = None           # TODO: Write to binary!
         self.exchange_rate = None           # TODO: Write to binary!
         
-        char_re = "([^0-9a-zA-Z\$%&*\+-/])"
+        char_re = '([^0-9a-zA-Z\$%&*\+-/])'
         self.record_field_valid_characters = re.compile(char_re)
     
     
@@ -202,15 +202,15 @@ class PostingLine(object):
         match = self.record_field_valid_characters.search(value)
         if match != None:
             invalid_char = match.group(1)
-            msg = "Invalid character in record field: " + repr(invalid_char)
+            msg = 'Invalid character in record field: ' + repr(invalid_char)
             raise ValueError(msg)
     
     
     def _encode_posting_text(self, value):
         if not isinstance(value, unicode):
             # filtering, only allow specified characters
-            value = value.decode("datev_ascii")
-        value = value.encode("datev_ascii")
+            value = value.decode('datev_ascii')
+        value = value.encode('datev_ascii')
         return value
     
     
@@ -221,11 +221,11 @@ class PostingLine(object):
         elif isinstance(value, Decimal):
             dec_places = get_number_of_decimal_places(str(value))
             if dec_places > 2:
-                msg = "Loosing precision when cutting '%s' to 2 decimal places!"
+                msg = 'Loosing precision when cutting "%s" to 2 decimal places!'
                 raise ValueError(msg % str(value))
             bin_volume = '%+d' % (100 * value)
         else:
-            msg = "unknown type for transaction volume: " + str(value.__class__)
+            msg = 'unknown type for transaction volume: ' + str(value.__class__)
             raise ValueError(msg)
         return bin_volume
     
@@ -237,7 +237,7 @@ class PostingLine(object):
     
     
     def to_binary(self):
-        "Return the binary KNE format for the specified data."
+        'Return the binary KNE format for the specified data.'
         assert self.cost_center1 == None # not yet implemented
         assert self.cost_center2 == None # not yet implemented
         bin_line = self._transaction_volume_to_binary()
