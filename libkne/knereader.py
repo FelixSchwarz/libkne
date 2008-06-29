@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 
-from transactionfile import TransactionFile
+from datafile import DataFile
 
 __all__ = ['KneReader']
 
@@ -51,7 +51,7 @@ class KneReader(object):
     
     
     def _parse_data_file(self, binary_control_record, data_fp):
-        tf = TransactionFile(self.config)
+        tf = DataFile(self.config)
         tf.from_binary(binary_control_record, data_fp)
         return tf
     

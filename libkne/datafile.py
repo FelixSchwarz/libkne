@@ -8,11 +8,10 @@ from postingline import PostingLine
 from util import parse_short_date, _short_date, parse_number, \
     parse_number_field, parse_optional_number_field, parse_string_field
 
-__all__ = ['TransactionFile']
+__all__ = ['DataFile']
 
 
-# TODO: Rename TransactionFile -> DataFile
-class TransactionFile(object):
+class DataFile(object):
     
     def __init__(self, config, version_identifier=None):
         self.config = config

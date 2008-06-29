@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 
-from transactionfile import TransactionFile
+from datafile import DataFile
 
 __all__ = ['TransactionManager']
 
@@ -16,7 +16,7 @@ class TransactionManager(object):
     
     def append_posting_line(self, line):
         if self.transaction_files == []:
-            new_file = TransactionFile(self.config, self.version_identifier)
+            new_file = DataFile(self.config, self.version_identifier)
             self.transaction_files.append(new_file)
         tf = self.transaction_files[-1]
         assert tf.append_posting_line(line)

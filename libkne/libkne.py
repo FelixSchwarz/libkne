@@ -6,7 +6,7 @@ datev_encoding.register()
 from controlrecord import *
 from postingline import *
 from transactionmanager import *
-from transactionfile import *
+from datafile import *
 from knewriter import *
 from knereader import *
 from knefilereader import *
