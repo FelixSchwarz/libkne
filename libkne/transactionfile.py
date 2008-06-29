@@ -5,7 +5,8 @@ import re
 
 from controlrecord import ControlRecord
 from postingline import PostingLine
-from util import parse_short_date, _short_date, parse_number
+from util import parse_short_date, _short_date, parse_number, \
+    parse_number_field, parse_optional_number_field, parse_string_field
 
 __all__ = ['TransactionFile']
 
@@ -166,7 +167,9 @@ class TransactionFile(object):
         assert binary_data[0] == '\x1d', repr(binary_data[0])
         assert binary_data[1] == '\x18'
         assert binary_data[2] == '1'
-        assert metadata['file_no'] == int(binary_data[3:6]), repr(binary_data[3:6])
+        data_carrier_number = self.config['data_carrier_number']
+        err_msg = ('%d != %s' % (data_carrier_number, repr(binary_data[3:6])))
+        assert data_carrier_number == int(binary_data[3:6]), err_msg
         application_number = int(binary_data[6:8])
         application_number_cr = self.cr.parsed_data()['application_number']
         assert application_number == application_number_cr, application_number
@@ -250,9 +253,28 @@ class TransactionFile(object):
         return end_index
     
     
+    def more_master_data_lines(self, binary_data, start_index):
+        if start_index < len(binary_data) and binary_data[start_index] == 't':
+            return True
+        return False
+    
+    
     def _parse_master_data(self, binary_data, start_index):
-        # TODO
-        return None
+        while self.more_master_data_lines(binary_data, start_index):
+            end_index = 1
+            value, end_index = parse_number_field(binary_data, 't', start_index, 9)
+            read_digits = end_index - start_index
+            if read_digits < 4:
+                is_id = True
+            else:
+                is_account_nr = True
+            text_value, end_index = parse_string_field(binary_data, '\x1e', end_index+1, 40)
+            aggregation_or_adjustment_key, end_index = parse_optional_number_field(binary_data, 'u', end_index+1, 10)
+            # TODO: Do something with the data here!
+            assert 'y' == binary_data[end_index+1], repr(binary_data[end_index+1])
+            start_index = end_index + 2
+        assert 'z' == binary_data[start_index]
+        return start_index
     
     
     def from_binary(self, binary_control_record, data_fp):
@@ -271,13 +293,11 @@ class TransactionFile(object):
         self._read_version_record(metadata, binary_data[end_index+1:end_index+14])
         start_index = end_index + 13 + 1
         if self.cr.describes_transaction_data():
-            start_index = self._parse_transactions(binary_data, start_index, metadata)
+            end_index = self._parse_transactions(binary_data, start_index, metadata)
         else:
-            start_index = self._parse_master_data(binary_data, start_index)
-        index = start_index + 1
-        while index + 1 < len(binary_data):
-            assert '\x00' == binary_data[index]
-            index += 1
+            end_index = self._parse_master_data(binary_data, start_index)
+        err_msg = ('%d != %d' % (end_index, len(binary_data)))
+        assert end_index + 1 == len(binary_data), err_msg
     
     
     def get_metadata(self):
@@ -294,4 +314,5 @@ class TransactionFile(object):
         self.finish()
         self.number_of_blocks = self._get_number_of_blocks()
         return self.binary_info
+
 

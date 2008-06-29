@@ -4,7 +4,7 @@ from decimal import Decimal
 import datetime
 import re
 
-from util import get_number_of_decimal_places, parse_number, parse_string_field
+from util import get_number_of_decimal_places, parse_number, parse_string
 
 __all__ = ['PostingLine']
 
@@ -105,7 +105,7 @@ class PostingLine(object):
         if data[start_index] == 'h':
             start = start_index + 1
             cash_discount, end_index = parse_number(data, start, start+10)
-            self.cash_discount = Decimal(cash_discount) / Decimal(10)
+            self.cash_discount = Decimal(cash_discount) / Decimal(100)
             return end_index
         return start_index - 1
     
@@ -159,7 +159,7 @@ class PostingLine(object):
     def _parse_base_currency(self, data, start_index):
         if data[start_index] == '\xb4':
             start = start_index + 1
-            base_currency, end_index = parse_string_field(data, start, start+3)
+            base_currency, end_index = parse_string(data, start, start+3)
             self.base_currency = base_currency
             return end_index
         return start_index - 1

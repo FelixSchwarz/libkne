@@ -6,7 +6,8 @@ import re
 __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA', 
            'APPLICATION_NUMBER_MASTER_DATA', '_short_date', 
            'product_abbreviation', 'get_number_of_decimal_places',
-           'parse_short_date', 'parse_number', 'parse_string_field']
+           'parse_short_date', 'parse_number', 'parse_number_field', 
+           'parse_optional_number_field', 'parse_string', 'parse_string_field']
 
 APPLICATION_NUMBER_TRANSACTION_DATA = 11
 APPLICATION_NUMBER_MASTER_DATA      = 13
@@ -83,7 +84,7 @@ def parse_number(data, start_index, max_end_index):
     return (int(string_number), end_index)
 
 
-def parse_string_field(data, start_index, max_end_index):
+def parse_string(data, start_index, max_end_index):
     '''Reads all characters until \x1c is read or max_end_index is reached.'''
     read_string = ''
     for i in range(start_index, max_end_index+1+1):
@@ -93,4 +94,26 @@ def parse_string_field(data, start_index, max_end_index):
     assert '\x1c' == data[i], repr(data[i])
     end_index = start_index + len(read_string) - 1 + 1
     return (read_string, end_index)
-    
+
+
+def parse_string_field(data, first_character, start, max_characters):
+    assert first_character == data[start]
+    value, end_index = parse_string(data, start+1, start+max_characters)
+    return (value, end_index)
+
+
+def parse_number_field(data, first_character, start, max_digits):
+    assert first_character == data[start]
+    value, end_index = parse_number(data, start+1, start + max_digits)
+    return (value, end_index)
+
+
+def parse_optional_number_field(data, first_character, start, max_digits):
+    '''Parses an optional numeric field (only parsed if first_character is
+    present in data[start]). Returns a tuple (value, last_index_used) where
+    value is None if the field was not present.'''
+    if first_character == data[start]:
+        value, end_index = parse_number(data, start+1, start + max_digits)
+        return (value, end_index)
+    return (None, start-1)
+

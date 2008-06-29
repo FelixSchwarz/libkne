@@ -37,6 +37,7 @@ Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
                               stored general ledger account number length
 Konto                         account
+Korrektur                     adjustment
 Kostenstelle (KOST)           cost center
 Mandantenendsumme             client total
 Mandantennummer               client number
@@ -47,6 +48,7 @@ Sachkonto                     general ledger account
 Skonto                        cash discount
 Stammdaten                    master data
 Umsatz (einer Buchung)        transaction volume
+Verdichtung                   aggregation
 Versionskennung               version identifier
 Versionssatz                  version record
 Verwaltungssatz               control record
