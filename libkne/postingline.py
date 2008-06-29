@@ -4,14 +4,15 @@ from decimal import Decimal
 import datetime
 import re
 
-from util import get_number_of_decimal_places, parse_number, parse_string
+from util import get_number_of_decimal_places, parse_number, \
+    parse_optional_string_field, parse_string
 
 __all__ = ['PostingLine']
 
 class PostingLine(object):
     def __init__(self):
         self.transaction_volume = None
-        self.posting_key = None
+        self.posting_key = None             # TODO: Write to binary!
         self.offsetting_account = None
         self.record_field1 = None
         self.record_field2 = None
@@ -111,16 +112,10 @@ class PostingLine(object):
     
     
     def _parse_posting_text(self, data, start_index):
-        if data[start_index] == '\x1e':
-            end_index = start_index + 1
-            max_end_index = end_index + 30 - 1
-            while data[end_index] != '\x1c' and end_index <= max_end_index:
-                end_index += 1
-            assert data[end_index] == '\x1c', repr(data[end_index])
-            text = data[start_index+1:end_index]
-            self.posting_text = text.decode('datev_ascii')
-            return end_index
-        return start_index - 1
+        value, end_index = parse_optional_string_field(data, '\x1e', start_index, 30)
+        if value != None:
+            self.posting_text = value.decode('datev_ascii')
+        return end_index
     
     
     def _parse_cost_center(self, data, start_index):
@@ -192,7 +187,6 @@ class PostingLine(object):
         end_index = line._parse_base_currency_amount(data, end_index+1)
         end_index = line._parse_base_currency(data, end_index+1)
         end_index = line._parse_exchange_rate(data, end_index+1)
-        #print repr(data[end_index-2:])
         assert 'y' == data[end_index + 1], repr(data[end_index + 1:])
         end_index += 1
         return (line, start_index + end_index)

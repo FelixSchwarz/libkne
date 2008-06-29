@@ -7,7 +7,8 @@ __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA',
            'APPLICATION_NUMBER_MASTER_DATA', '_short_date', 
            'product_abbreviation', 'get_number_of_decimal_places',
            'parse_short_date', 'parse_number', 'parse_number_field', 
-           'parse_optional_number_field', 'parse_string', 'parse_string_field']
+           'parse_optional_number_field', 'parse_optional_string_field', 
+           'parse_string', 'parse_string_field']
 
 APPLICATION_NUMBER_TRANSACTION_DATA = 11
 APPLICATION_NUMBER_MASTER_DATA      = 13
@@ -94,6 +95,13 @@ def parse_string(data, start_index, max_end_index):
     assert '\x1c' == data[i], repr(data[i])
     end_index = start_index + len(read_string) - 1 + 1
     return (read_string, end_index)
+
+
+def parse_optional_string_field(data, first_character, start, max_characters):
+    if first_character == data[start]:
+        value, end_index = parse_string(data, start+1, start+max_characters)
+        return (value, end_index)
+    return (None, start-1)
 
 
 def parse_string_field(data, first_character, start, max_characters):
