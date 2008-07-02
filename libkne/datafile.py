@@ -4,6 +4,7 @@ import math
 import re
 
 from controlrecord import ControlRecord
+from data_line import DataLine
 from postingline import PostingLine
 from util import parse_short_date, _short_date, parse_number, \
     parse_number_field, parse_optional_number_field, parse_string_field
@@ -260,18 +261,9 @@ class DataFile(object):
     
     def _parse_master_data(self, binary_data, start_index):
         while self.more_master_data_lines(binary_data, start_index):
-            end_index = 1
-            value, end_index = parse_number_field(binary_data, 't', start_index, 9)
-            read_digits = end_index - start_index
-            if read_digits < 4:
-                is_id = True
-            else:
-                is_account_nr = True
-            text_value, end_index = parse_string_field(binary_data, '\x1e', end_index+1, 40)
-            aggregation_or_adjustment_key, end_index = parse_optional_number_field(binary_data, 'u', end_index+1, 10)
-            # TODO: Do something with the data here!
-            assert 'y' == binary_data[end_index+1], repr(binary_data[end_index+1])
-            start_index = end_index + 2
+            line, end_index = DataLine.from_binary(binary_data, start_index)
+            self.lines.append(line)
+            start_index = end_index + 1
         assert 'z' == binary_data[start_index]
         return start_index
     
@@ -291,7 +283,7 @@ class DataFile(object):
         end_index = self._check_feed_line(metadata, binary_data[:80])
         self._read_version_record(metadata, binary_data[end_index+1:end_index+14])
         start_index = end_index + 13 + 1
-        if self.cr.describes_transaction_data():
+        if self.contains_transaction_data():
             end_index = self._parse_transactions(binary_data, start_index, metadata)
         else:
             end_index = self._parse_master_data(binary_data, start_index)
@@ -305,6 +297,13 @@ class DataFile(object):
     
     
     def get_posting_lines(self):
+        assert self.contains_transaction_data()
+        assert not self.open_for_additions
+        return self.lines
+    
+    
+    def get_master_data_lines(self):
+        assert not self.contains_transaction_data()
         assert not self.open_for_additions
         return self.lines
     
