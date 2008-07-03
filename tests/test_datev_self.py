@@ -130,3 +130,29 @@ class TestKneReaderDATEVSelfSamples(SampleDataReaderCase):
         self.assertEqual(230, line.cash_discount)
     
     
+    def test_addresses(self):
+        dfile = self.reader.get_file(1)
+        data_lines = dfile.get_master_data_lines()
+        self.assertEqual(65, len(data_lines))
+        line = data_lines[6]
+        self.assertEqual(u"Straße-Beispiel", line.text)
+    
+    
+    def test_account_labels(self):
+        dfile = self.reader.get_file(2)
+        data_lines = dfile.get_master_data_lines()
+        self.assertEqual(2, len(data_lines))
+        self.assertEqual(12010000, data_lines[0].key)
+        self.assertEqual(u"Hausbank", data_lines[0].text)
+        self.assertEqual(82990000, data_lines[1].key)
+        self.assertEqual(u"Verrechnungskonto Erlöse A", data_lines[1].text)
+    
+    
+    def test_payment_conditions(self):
+        dfile = self.reader.get_file(3)
+        data_lines = dfile.get_master_data_lines()
+        self.assertEqual(35, len(data_lines))
+        self.assertEqual(801, data_lines[2].key)
+        self.assertEqual(u'30 Tage Netto, 7 Tage 3%, 14 Tage 1,5%', 
+                         data_lines[2].text)
+

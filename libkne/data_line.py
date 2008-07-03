@@ -21,8 +21,8 @@ class DataLine(object):
             is_id = True
         else:
             is_account_nr = True
-        line.text, end_index = parse_string_field(binary_data, '\x1e', 
-                                                  end_index+1, 40)
+        text, end_index = parse_string_field(binary_data, '\x1e', end_index+1, 40)
+        line.text = text.decode("datev_ascii")
         key2, end_index = parse_optional_number_field(binary_data, 'u', 
                                                       end_index+1, 10)
         line.aggregation_or_adjustment_key = key2
@@ -52,7 +52,7 @@ class DataLine(object):
     
     
     def __repr__(self):
-        return '%s<%d, "%s", %s>' % (self.__class__.__name__, self.key, self.text, self.aggregation_or_adjustment_key)
+        return '%s<%d, "%s", %s>' % (self.__class__.__name__, self.key, repr(self.text), self.aggregation_or_adjustment_key)
 
 
 
