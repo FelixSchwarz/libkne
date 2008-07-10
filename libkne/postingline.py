@@ -4,7 +4,7 @@ from decimal import Decimal
 import datetime
 import re
 
-from util import get_number_of_decimal_places, parse_number, \
+from libkne.util import get_number_of_decimal_places, parse_number, \
     parse_optional_string_field, parse_string
 
 __all__ = ['PostingLine']
