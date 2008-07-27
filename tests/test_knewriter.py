@@ -34,7 +34,7 @@ def _build_kne_writer(config=None, header_fp=None):
 
 
 def _build_posting_line(**kwargs):
-    line = PostingLine()
+    line = PostingLine({})
     line.transaction_volume = -115
     line.offsetting_account = 100010000
     line.record_field1 = 'Re526100910'

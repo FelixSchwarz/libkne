@@ -4,13 +4,15 @@ from decimal import Decimal
 import datetime
 import re
 
-from libkne.util import get_number_of_decimal_places, parse_number, \
-    parse_optional_string_field, parse_string
+from libkne.util import assert_true, get_number_of_decimal_places, \
+    parse_number, parse_number_field, parse_optional_string_field, parse_string
 
 __all__ = ['PostingLine']
 
 class PostingLine(object):
-    def __init__(self):
+    def __init__(self, file_metadata):
+        self.file_metadata = file_metadata
+        
         self.transaction_volume = None
         self.posting_key = None             # TODO: Write to binary!
         self.offsetting_account = None
@@ -36,7 +38,7 @@ class PostingLine(object):
     
     
     def _parse_transaction_volume(self, data):
-        assert data[0] in ['+', '-'], repr(data[0])
+        assert_true(data[0] in ['+', '-'], data[0])
         volume, end_index = parse_number(data, 1, 10)
         complete_volume = int(data[0] + str(volume))
         volume = Decimal(complete_volume) / Decimal(100)
@@ -54,15 +56,6 @@ class PostingLine(object):
             return start_index - 1
     
 
-    def _parse_offsetting_account(self, data, start_index):
-        assert 'a' == data[start_index], repr(data[start_index])
-        start = start_index+1
-        # TODO: Laenge der aufgezeichneten Nummern überprüfen!
-        account, end_index = parse_number(data, start, start+9)
-        self.offsetting_account = account
-        return end_index
-    
-    
     def _parse_record_field(self, data, start_index, first_character, attr_name):
         if data[start_index] == first_character:
             start = start_index+1
@@ -97,6 +90,8 @@ class PostingLine(object):
         assert 'e' == data[start_index]
         start = start_index+1
         # TODO: Laenge der aufgezeichneten Nummern überprüfen!
+        
+        #stored_general_ledger_account_no_length
         account, end_index = parse_number(data, start, start+9)
         self.account_number  = account
         return end_index
@@ -171,11 +166,20 @@ class PostingLine(object):
     
     @classmethod
     def from_binary(cls, binary_data, start_index, metadata):
+        print 'start_index: ', start_index
         data = binary_data[start_index:]
-        line = cls()
+        line = cls(file_metadata=metadata)
+        print repr(binary_data[start_index-1:start_index+5])
         end_index = line._parse_transaction_volume(data)
         end_index = line._parse_posting_key(data, end_index+1)
-        end_index = line._parse_offsetting_account(data, end_index+1)
+        
+        account_no_length = line.file_metadata.get('stored_general_ledger_account_no_length')
+        # sub-ledger account numbers contain 1 digit more than general ledger
+        # account numbers
+        result = \
+            parse_number_field(data, 'a', end_index+1, 9, restrict_number_length=account_no_length+1)
+        (line.offsetting_account, end_index) = result
+        
         end_index = line._parse_record_field(data, end_index+1, '\xbd', 'record_field1')
         end_index = line._parse_record_field(data, end_index+1, '\xbe', 'record_field2')
         end_index = line._parse_transaction_date(data, end_index+1, metadata)

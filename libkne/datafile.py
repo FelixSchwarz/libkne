@@ -2,12 +2,13 @@
 
 import math
 import re
+import warnings
 
-from controlrecord import ControlRecord
-from data_line import DataLine
-from postingline import PostingLine
-from util import parse_short_date, _short_date, parse_number, \
-    parse_number_field, parse_optional_number_field, parse_string_field
+from libkne.controlrecord import ControlRecord
+from libkne.data_line import DataLine
+from libkne.postingline import PostingLine
+from libkne.util import assert_match, assert_true, parse_short_date, \
+    _short_date, parse_number, parse_string
 
 __all__ = ['DataFile']
 
@@ -188,20 +189,14 @@ class DataFile(object):
         else:
             index = 28
         assert metadata['password'] == binary_data[index:index+4]
-        if ' ' * 16 == binary_data[index+4:index+20]:
-            metadata['application_info'] = ''
-        else:
-            metadata['application_info'] = binary_data[index+4:index+20].strip()
-        # Specification says 'Input-Info'/'Konstante' - maybe this is a 
-        # field which can be used arbitrarily?
-        input_info = binary_data[index+20:index+36]
-        assert ' ' * 16 == input_info, repr(input_info)
+        metadata['application_info'] = binary_data[index+4:index+20].strip()
+        metadata['input_info'] = binary_data[index+20:index+36].strip()
         assert 'y' == binary_data[index+36]
         return index + 36
     
     
     def _read_version_record(self, metadata, binary_data):
-        assert len(binary_data) == 13
+        #assert len(binary_data) == 13
         if self.cr.describes_transaction_data():
             assert '\xb5' == binary_data[0], repr(binary_data[0])
         else:
@@ -219,13 +214,39 @@ class DataFile(object):
         assert stored_general_ledger_account_no_length <= 8
         metadata['stored_general_ledger_account_no_length'] = \
             stored_general_ledger_account_no_length
-        assert stored_general_ledger_account_no_length >= used_general_ledger_account_no_length
-        assert ',' == binary_data[6]
-        product_abbreviation = binary_data[7:11]
-        assert re.match('^[\w0-9\-]{4}$', product_abbreviation), repr(product_abbreviation)
+        
+        # DATEV SELF says in 5.3.2 (p. 152) that the the used account number 
+        # length must not be smaller than the stored account number length but
+        # DATEV Rechnungswesen does export those files. SELF Prüfprogramm warns
+        # that the account numbers will be cut from right so this algorithm is
+        # used here, too.
+        if used_general_ledger_account_no_length > stored_general_ledger_account_no_length:
+            msg_template = "Used general ledger account number in data file " + \
+                           "is greater than the stored general ledger " + \
+                           "account number (%d vs. %d). Account numbers " + \
+                           "will be cut starting from right."
+            msg = msg_template % (used_general_ledger_account_no_length, stored_general_ledger_account_no_length)
+            warnings.warn(msg, UserWarning, stacklevel=0)
+        assert_match(',', binary_data[6])
+        
+        # DATEV SELF specification says that the product abbreviation is 4 bytes
+        # long so the version info for transaction data is 13 bytes in total
+        # (5.3.2, p. 152).
+        # Unfortunately, DATEV Rechnungswesen may produce files with additional
+        # spaces after their 'REWE' identification...
+        product_abbreviation, end_index = parse_string(binary_data, 7)
+        end_index = 7 + len(product_abbreviation)
+        if len(product_abbreviation) > 4:
+            msg_template = 'Product abbreviation is longer than 4 bytes: "%s"'
+            warnings.warn(msg_template % repr(product_abbreviation), UserWarning)
+        product_abbreviation = product_abbreviation.strip()
+        assert_true(re.match('^[\w0-9\-]{4}$', product_abbreviation) != None, 
+                    product_abbreviation)
         self.config['product_abbreviation'] = product_abbreviation
-        assert '\x1c' == binary_data[11]
-        assert 'y' == binary_data[12]
+        
+        assert_match('\x1c', binary_data[end_index], binary_data)
+        assert_match('y', binary_data[end_index + 1])
+        return end_index + 1
     
     
     def more_posting_lines(self, binary_data, end_index):
@@ -277,12 +298,13 @@ class DataFile(object):
         binary_data = data_fp.read()
         metadata = self.get_metadata()
         number_data_blocks = metadata['number_data_blocks']
-        assert number_data_blocks > 0
-        assert 256 * number_data_blocks == len(binary_data)
+        assert_true(number_data_blocks > 0, number_data_blocks)
+        assert_match(256 * number_data_blocks, len(binary_data))
         binary_data = self._remove_fill_bytes(binary_data, number_data_blocks)
         end_index = self._check_feed_line(metadata, binary_data[:80])
-        self._read_version_record(metadata, binary_data[end_index+1:end_index+14])
-        start_index = end_index + 13 + 1
+        relative_end_index = self._read_version_record(metadata, binary_data[end_index+1:])
+        end_index += relative_end_index + 1
+        start_index = end_index + 1
         if self.contains_transaction_data():
             end_index = self._parse_transactions(binary_data, start_index, metadata)
         else:
@@ -297,8 +319,8 @@ class DataFile(object):
     
     
     def get_posting_lines(self):
-        assert self.contains_transaction_data()
-        assert not self.open_for_additions
+        assert_true(self.contains_transaction_data())
+        assert_true(not self.open_for_additions)
         return self.lines
     
     

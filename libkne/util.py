@@ -5,6 +5,7 @@ import re
 
 __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA', 
            'APPLICATION_NUMBER_MASTER_DATA', '_short_date', 
+           'assert_match', 'assert_true', 
            'product_abbreviation', 'get_number_of_decimal_places',
            'parse_short_date', 'parse_number', 'parse_number_field', 
            'parse_optional_number_field', 'parse_optional_string_field', 
@@ -57,10 +58,30 @@ def get_number_of_decimal_places(number_string):
     return 0
 # ------------------------------------------------------------------------------
 
+def assert_match(expected, real_data, additional_data=None):
+    '''Asserts that expected is equal to real_data. Raises a ValueError if this
+    assumption is not True. If additional_data is != None, repr() of this value
+    will be appended on the exception.
+    This method won't be optimized out like assert statements in pyo files.'''
+    if not (expected == real_data):
+        msg = '%s != %s' % (repr(expected), repr(real_data))
+        if additional_data != None:
+            msg += ' ("%s")' % repr(additional_data)
+        raise ValueError(msg)
+
+
+def assert_true(condition, additional_data=None):
+    '''Asserts that condition is True. Raises a ValueError otherwise. If 
+    additional_data is != None, repr() of this value will be appended on the 
+    exception.
+    This method won't be optimized out like assert statements in pyo files.'''
+    assert_match(True, condition, additional_data=additional_data)
+
 
 def parse_short_date(binary_data):
     '''Parses a short date with the format 'DDMMJJ' into a real datetime.date.
     Years lower than 60 are interpreted as 19xx, all other years as 20xx.'''
+    assert_match(6, len(binary_data), binary_data)
     assert len(binary_data) == 6, len(binary_data)
     day = int(binary_data[:2])
     month = int(binary_data[2:4])
@@ -72,27 +93,38 @@ def parse_short_date(binary_data):
     return datetime.date(year, month, day)
 
 
-def parse_number(data, start_index, max_end_index):
+def parse_number(data, start_index, max_end_index, restrict_number_length=None):
     '''Reads all digits from start_index until either a non-digit character is
     read or the digit on position max_end_index was read successfully. Returns
-    the last index where a digit was read.'''
+    the read number (as int) and the last index where a digit was read.
+    If restrict_number_length is specified, the read number string will be cut
+    after restrict_number_length before removing leading zeroes (if any).'''
     string_number = ''
     for i in range(start_index, max_end_index+1):
         if data[i] not in map(str, range(10)):
             break
         string_number += data[i]
     end_index = start_index + len(string_number) - 1
+    if restrict_number_length != None and len(string_number) > restrict_number_length:
+        print 'restricting "%s" to %d characters (is %d bytes long)' % (string_number, restrict_number_length, len(string_number))
+        string_number = string_number[0:restrict_number_length]
     return (int(string_number), end_index)
 
 
-def parse_string(data, start_index, max_end_index):
+def parse_string(data, start_index, max_end_index=None):
     '''Reads all characters until \x1c is read or max_end_index is reached.'''
     read_string = ''
-    for i in range(start_index, max_end_index+1+1):
-        if data[i] == '\x1c':
-            break
-        read_string += data[i]
-    assert '\x1c' == data[i], repr(data[i])
+    if max_end_index != None:
+        for i in range(start_index, max_end_index+1+1):
+            if data[i] == '\x1c':
+                break
+            read_string += data[i]
+    else:
+        i = start_index
+        while i < len(data) and data[i] != '\x1c':
+            read_string += data[i]
+            i += 1
+    assert_match('\x1c', data[i], data[i])
     end_index = start_index + len(read_string) - 1 + 1
     return (read_string, end_index)
 
@@ -110,9 +142,10 @@ def parse_string_field(data, first_character, start, max_characters):
     return (value, end_index)
 
 
-def parse_number_field(data, first_character, start, max_digits):
-    assert first_character == data[start]
-    value, end_index = parse_number(data, start+1, start + max_digits)
+def parse_number_field(data, first_character, start, max_digits, restrict_number_length=None):
+    assert first_character == data[start], repr(first_character) + ' != ' + repr(data[start])
+    value, end_index = parse_number(data, start+1, start + max_digits,
+                                    restrict_number_length=restrict_number_length)
     return (value, end_index)
 
 

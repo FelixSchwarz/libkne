@@ -39,6 +39,7 @@ Kostenstelle (KOST)           cost center
 Mandantenendsumme             client total
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
+Personenkonto                 sub-ledger account
 Primanota                     prima nota
 Produktkürzel                 product abbreviation
 Sachkonto                     general ledger account
