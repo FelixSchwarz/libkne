@@ -196,7 +196,6 @@ class DataFile(object):
     
     
     def _read_version_record(self, metadata, binary_data):
-        #assert len(binary_data) == 13
         if self.cr.describes_transaction_data():
             assert '\xb5' == binary_data[0], repr(binary_data[0])
         else:
@@ -235,7 +234,6 @@ class DataFile(object):
         # Unfortunately, DATEV Rechnungswesen may produce files with additional
         # spaces after their 'REWE' identification...
         product_abbreviation, end_index = parse_string(binary_data, 7)
-        end_index = 7 + len(product_abbreviation)
         if len(product_abbreviation) > 4:
             msg_template = 'Product abbreviation is longer than 4 bytes: "%s"'
             warnings.warn(msg_template % repr(product_abbreviation), UserWarning)
