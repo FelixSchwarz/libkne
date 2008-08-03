@@ -8,8 +8,9 @@ from libkne import KneFileReader
 
 __all__ = ["get_data_files", "SampleDataReaderCase"]
 
-def get_data_files(datadir, number_data_files):
-    file_dir = os.path.dirname(__file__)
+def get_data_files(datadir, number_data_files, file_dir=None):
+    if file_dir == None:
+        file_dir = os.path.dirname(__file__)
     datadir = os.path.join('testdata', datadir)
     abs_dir = os.path.abspath(os.path.join(file_dir, datadir))
     header = os.path.join(abs_dir, 'EV01')
@@ -21,7 +22,7 @@ def get_data_files(datadir, number_data_files):
 
 
 class SampleDataReaderCase(unittest.TestCase):
-    def setUp(self, datadir, number_data_files=1):
+    def setUp(self, datadir, number_data_files=1, file_dir=None):
         super(SampleDataReaderCase, self).setUp()
-        header, data_fps = get_data_files(datadir, number_data_files)
+        header, data_fps = get_data_files(datadir, number_data_files, file_dir=file_dir)
         self.reader = KneFileReader(header, data_fps)

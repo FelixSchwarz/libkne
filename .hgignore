@@ -1,5 +1,4 @@
-tests/test_knereader_grede.py
+real_data
 
 syntax: glob
 *.pyc
-tests/testdata/grede/*
