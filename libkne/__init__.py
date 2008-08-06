@@ -9,8 +9,14 @@ from postingline import *
 import datev_encoding
 datev_encoding.register()
 
-
 '''
+Some constants used in the KNE format
+
+application info
+  11    transaction data for financial accounting
+  13    master data (financial accounting)
+
+
 Translation terms used within this library
 
 Deutsch/German                Englisch/English
@@ -30,6 +36,7 @@ Buchungstext                  posting text
 Buchungszeile                 posting line
 Datenträgerkennsatz           data carrier header
 Datenträgernummer             data carrier number
+Finanzbuchhaltung (Fibu)      financial accounting
 Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
                               stored general ledger account number length
@@ -54,5 +61,6 @@ Vollvorlauf                   complete feed line
 Währungskennzeichen           currency code
 Währungskurs                  exchange rate
 Wirtschaftsjahr               financial year
+Zwischensumme                 subtotal
 '''
 

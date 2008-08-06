@@ -252,23 +252,31 @@ class DataFile(object):
     
     
     def _check_client_total(self, binary_data, start_index):
-        nr_start_index = start_index + 1
+        nr_start_index = start_index
         nr_max_end_index = start_index+1+14-1
         client_total, end_index = parse_number(binary_data, nr_start_index, nr_max_end_index)
         if binary_data[start_index] == 'w':
             client_total *= -1
-        assert 'y' == binary_data[end_index+1], repr(binary_data[end_index+1])
-        assert 'z' == binary_data[end_index+2], repr(binary_data[end_index+2])
-        return end_index + 2
+        end_index += 1
+        assert 'y' == binary_data[end_index], repr(binary_data[end_index])
+        return end_index + 1
     
     
     def _parse_transactions(self, binary_data, start_index, metadata):
-        while (start_index < len(binary_data)) and \
-            (self.more_posting_lines(binary_data, start_index)):
-            line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
-            self.lines.append(line)
-            start_index = end_index + 1
-        end_index = self._check_client_total(binary_data, end_index+1)
+        end_index = start_index - 1
+        while True:
+            # There can be multiple subtotals between the lines so we must on
+            # break if we really reached 'client total'
+            while (start_index < len(binary_data)) and \
+                (self.more_posting_lines(binary_data, start_index)):
+                line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
+                self.lines.append(line)
+                start_index = end_index + 1
+            end_index = self._check_client_total(binary_data, end_index+2)
+            if binary_data[end_index] != 'z':
+                start_index = end_index
+            else:
+                break
         return end_index
     
     
@@ -307,7 +315,7 @@ class DataFile(object):
             end_index = self._parse_transactions(binary_data, start_index, metadata)
         else:
             end_index = self._parse_master_data(binary_data, start_index)
-        err_msg = ('%d != %d' % (end_index, len(binary_data)))
+        err_msg = ('%d + 1 != %d' % (end_index, len(binary_data)))
         assert end_index + 1 == len(binary_data), err_msg
     
     

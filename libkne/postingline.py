@@ -166,10 +166,8 @@ class PostingLine(object):
     
     @classmethod
     def from_binary(cls, binary_data, start_index, metadata):
-        print 'start_index: ', start_index
         data = binary_data[start_index:]
         line = cls(file_metadata=metadata)
-        print repr(binary_data[start_index-1:start_index+5])
         end_index = line._parse_transaction_volume(data)
         end_index = line._parse_posting_key(data, end_index+1)
         
