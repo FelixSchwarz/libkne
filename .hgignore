@@ -1,4 +1,5 @@
 real_data
+.svn
 
 syntax: glob
 *.pyc
