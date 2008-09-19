@@ -48,8 +48,8 @@ decoding_map.update(codecs.make_identity_dict(range(0x5f,0x7b)))
 #      0 to 0x20 are subject to dual use as ASCII control characters and 
 #      graphical output (according to Wikipedia) and the automatic generation
 #      script uses the ASCII control characters for backward-mapping.
-#   3. The unicode Euro glyph (€, 0x20ac) is not present in all modifications/
-#      variants/successors of the CP437 codec I cound find.
+#   3. The unicode Euro glyph (€, 0x20ac) is not present in any of the
+#      modifications/variants/successors of the CP437 codec I cound find.
 #   4. A custom codec does input validation too because characters not defined
 #      here will cause an Exception to be thrown.
 #
