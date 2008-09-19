@@ -84,11 +84,11 @@ class DataFile(object):
         return bin_versioninfo
     
     
-    def append_posting_line(self, line):
-        '''Append a new posting line to this transaction file (only if 
-        to_binary() was not called before on this file!). Return True if the 
-        line was appended successfully else False. If False, no 
-        more lines can be appended to this file.'''
+    def append_line(self, line):
+        '''Append a new line to this file (only if to_binary() was not called 
+        before on this file!). Return True if the line was appended 
+        successfully else False. If False, no more lines can be appended to 
+        this file.'''
         assert self.open_for_additions
         self.lines.append(line)
         return True

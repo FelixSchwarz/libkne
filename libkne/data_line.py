@@ -11,6 +11,23 @@ class DataLine(object):
         self.aggregation_or_adjustment_key = key2
     
     
+    def __eq__(self, other):
+        if isinstance(other, DataLine):
+            same_key = (self.key == other.key)
+            same_text = (self.text == other.text)
+            same_key2 = (self.aggregation_or_adjustment_key == other.aggregation_or_adjustment_key)
+            return same_key and same_text and same_key2
+        return False
+    
+    
+    def __ne__(self, other):
+        return not (self == other)
+    
+    
+    def __repr__(self):
+        return '%s<%d, "%s", %s>' % (self.__class__.__name__, self.key, repr(self.text), self.aggregation_or_adjustment_key)
+    
+    
     @classmethod
     def from_binary(cls, binary_data, start_index):
         line = cls()
@@ -33,26 +50,18 @@ class DataLine(object):
         #    else:
         #        aggregate all data between 101
         #        8xx -> Zahlungsbedingungen
-        #        8xx -> Zahlungsbedingungen
         assert 'y' == binary_data[end_index+1], repr(binary_data[end_index+1])
         return (line, end_index+1)
     
     
-    def __eq__(self, other):
-        if isinstance(other, DataLine):
-            same_key = (self.key == other.key)
-            same_text = (self.text == other.text)
-            same_key2 = (self.aggregation_or_adjustment_key == other.aggregation_or_adjustment_key)
-            return same_key and same_text and same_key2
-        return False
-    
-    
-    def __ne__(self, other):
-        return not (self == other)
-    
-    
-    def __repr__(self):
-        return '%s<%d, "%s", %s>' % (self.__class__.__name__, self.key, repr(self.text), self.aggregation_or_adjustment_key)
+    def to_binary(self):
+        assert len(str(self.key)) <= 9
+        assert len(self.text) <= 40
+        # TODO: Verdichtung/Korrektur
+        text = unicode(self.text).encode('datev_ascii')
+        bin_line = 't' + str(self.key) + '\x1e' + text + '\x1c' + 'y'
+        return bin_line
+
 
 
 

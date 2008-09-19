@@ -3,6 +3,7 @@
 from data_line import *
 from knereader import *
 from knefilereader import *
+from knefilewriter import *
 from knewriter import *
 from postingline import *
 
@@ -69,12 +70,14 @@ Finanzbuchhaltung (Fibu)      financial accounting
 Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
                               stored general ledger account number length
+Kennziffer                    key
 Konto                         account
 Korrektur                     adjustment
 Kostenstelle (KOST)           cost center
 Mandantenendsumme             client total
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
+Nationalitätenkennzeichen     nationality key
 Netto                         net
 Personenkonto                 sub-ledger account
 Primanota                     prima nota
@@ -94,6 +97,7 @@ Vorsteuer                     input tax
 Währungskennzeichen           currency code
 Währungskurs                  exchange rate
 Wirtschaftsjahr               financial year
+Zustellzusatz                 additional delivery information
 Zwischensumme                 subtotal
 '''
 

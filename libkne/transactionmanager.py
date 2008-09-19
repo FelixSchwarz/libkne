@@ -12,14 +12,23 @@ class TransactionManager(object):
         self.data_fp_builder = data_fp_builder
         
         self.transaction_files = []
+        self.masterdata_files = []
+    
+    
+    def append_masterdata_line(self, line):
+        if len(self.masterdata_files) == 0:
+            new_file = DataFile(self.config, self.version_identifier)
+            self.masterdata_files.append(new_file)
+        tf = self.masterdata_files[-1]
+        assert tf.append_line(line)
     
     
     def append_posting_line(self, line):
-        if self.transaction_files == []:
+        if len(self.transaction_files) == 0:
             new_file = DataFile(self.config, self.version_identifier)
             self.transaction_files.append(new_file)
         tf = self.transaction_files[-1]
-        assert tf.append_posting_line(line)
+        assert tf.append_line(line)
     
     
     def finish(self):

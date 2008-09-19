@@ -9,7 +9,8 @@ __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA',
            'product_abbreviation', 'get_number_of_decimal_places',
            'parse_short_date', 'parse_number', 'parse_number_field', 
            'parse_optional_number_field', 'parse_optional_string_field', 
-           'parse_string', 'parse_string_field']
+           'parse_string', 'parse_string_field',
+           'short_date_to_binary', ]
 
 APPLICATION_NUMBER_TRANSACTION_DATA = 11
 APPLICATION_NUMBER_MASTER_DATA      = 13
@@ -17,9 +18,7 @@ APPLICATION_NUMBER_MASTER_DATA      = 13
 product_abbreviation = 'lkne'
 
 def _short_date(date):
-    format = '%02d%02d%02d'
-    short_year = int(str(date.year)[2:])
-    return format % (date.day, date.month, short_year)
+    return short_date_to_binary(date)
 
 # ------------------------------------------------------------------------------
 sciformat_regex = re.compile('^(-?\d+(?:\.\d+)?)(?:E(\+\d+))?$')
@@ -157,4 +156,11 @@ def parse_optional_number_field(data, first_character, start, max_digits):
         value, end_index = parse_number(data, start+1, start + max_digits)
         return (value, end_index)
     return (None, start-1)
+
+
+def short_date_to_binary(date):
+    format = '%02d%02d%02d'
+    short_year = int(str(date.year)[2:])
+    return format % (date.day, date.month, short_year)
+
 
