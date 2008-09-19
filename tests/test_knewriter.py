@@ -6,7 +6,8 @@ import StringIO
 import unittest
 
 
-from libkne import KneWriter, KneReader, PostingLine
+from libkne import DataLine, KneWriter, KneReader, PostingLine
+
 
 def _default_config():
     config = {}
@@ -47,6 +48,19 @@ def _build_posting_line(**kwargs):
         if hasattr(line, key):
             setattr(line, key, kwargs[key])
     return line
+
+
+def _build_masterdata_lines(**kwargs):
+    line1, line2 = DataLine({}), DataLine({})
+    line1.key = 101
+    
+    line2.key = 103
+    line2.text = 'Foo'
+    for key in kwargs:
+        if hasattr(line2, key):
+            setattr(line2, key, kwargs[key])
+    return [line1, line2]
+
 
 def _default_binary_posting_line(with_ammount=True):
     binary_line = ''
@@ -137,7 +151,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
     
     
-    def _assemble_data(self):
+    def _assemble_transaction_data(self):
         line = _build_posting_line()
         self.writer.add_posting_line(line)
         self.writer.add_posting_line(line)
@@ -172,7 +186,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         #print repr(expected_feed_line)
         #print repr(binary_data)
         self.assertEquals(expected_feed_line, binary_data)
-        
+    
     
     def _check_version_string(self, binary_data):
         expected_version_string = '\xb5' + '1,8,8,lkne' + '\x1c' + 'y'
@@ -208,7 +222,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
     
     
     def test_finish(self):
-        self._assemble_data()
+        self._assemble_transaction_data()
         binary_header = self.header_fp.read()
         self._check_header_file(binary_header)
  
@@ -225,7 +239,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
 
 
     def test_read_dogfood(self):
-        self._assemble_data()
+        self._assemble_transaction_data()
         self.reader = KneReader(self.header_fp, [self.data_fp])
 
         tfile = self.reader.get_file(0)
@@ -240,4 +254,67 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         self.assertEqual(84000000, line1.account_number)
         self.assertEqual('AR mit UST-Automatikkonto', line1.posting_text)
         self.assertEqual('EUR', line1.currency_code_transaction_volume)
+
+
+
+class TestKneWritingSimpleMasterData(unittest.TestCase):
+    def setUp(self):
+        self.header_fp = StringIO.StringIO()
+        self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
+    
+    
+    def _assemble_masterdata(self):
+        lines = _build_masterdata_lines()
+        self.writer.add_masterdata_lines(lines)
+        self.writer.finish()
+        
+        self.header_fp.seek(0)
+        self.data_fp.seek(0)
+    
+    
+    def _check_header_file(self, binary_header):
+        data_carrier = '001' + '   ' + '1234567' + 'Datev eG ' + ' ' + \
+                       '00001' + '00001' + (' ' * 95)
+        # TODO: Ev. abrechnungsnummer entfernen
+        control_record = 'V' + '00001' + '13' + 'FS' + '1234567' + '00042' + \
+                         '018908' + '          ' + '      ' + '001' + '    ' + \
+                         '00001' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
+                         (' ' * 53)
+        self.assertEqual(128, len(control_record))
+        expected_binary = data_carrier + control_record
+        self.assertEqual(256, len(expected_binary))
+        
+        #print repr(expected_binary)
+        #print repr(binary_header)
+        self.assertEqual(expected_binary, binary_header)
+    
+    
+    def _check_short_feed_line(self, binary_data):
+        expected_feed_line = '\x1d' + '\x18' + '1' + '001' + '13' + 'FS' + \
+                             '1234567' + '00042' + '018908' + \
+                             '    ' + (' ' * 16) + (' ' * 16) + 'y'
+        self.assertEqual(65, len(expected_feed_line))
+        print repr(expected_feed_line)
+        print repr(binary_data)
+        self.assertEquals(expected_feed_line, binary_data)
+    
+    
+    def _check_version_string(self, binary_data):
+        expected_version_string = '\xb6' + '1,8,8,lkne' + '\x1c' + 'y'
+        self.assertEqual(13, len(expected_version_string))
+        #print repr(expected_version_string)
+        #print repr(binary_data)
+        self.assertEquals(expected_version_string, binary_data)
+    
+    
+    def test_finish(self):
+        self._assemble_masterdata()
+        binary_header = self.header_fp.read()
+        self._check_header_file(binary_header)
+        
+        binary_data = self.data_fp.read()
+        self.assertEqual(0, len(binary_data) % 256)
+        self._check_short_feed_line(binary_data[:65])
+        self._check_version_string(binary_data[65:78])
+
 

@@ -137,6 +137,20 @@ class KneWriter(object):
         self.transaction_manager.append_posting_line(line)
     
     
+    def add_posting_lines(self, lines):
+        for line in lines:
+            self.add_posting_line(line)
+    
+    
+    def add_masterdata_line(self, line):
+        self.transaction_manager.append_masterdata_line(line)
+    
+    
+    def add_masterdata_lines(self, lines):
+        for line in lines:
+            self.add_masterdata_line(line)
+    
+    
     def finish(self):
         '''Write all data to the given file-like objects and generate the header
         file contents.'''

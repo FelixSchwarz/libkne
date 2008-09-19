@@ -25,11 +25,20 @@ class ControlRecord(object):
         self.number_of_blocks = None
         self.meta = None
     
+    
     def describes_transaction_data(self):
-        return self.meta['application_number'] == APPLICATION_NUMBER_TRANSACTION_DATA
+        result = False
+        if self.meta == None:
+            integer_app_nr = int(self.application_number)
+            result = (integer_app_nr == APPLICATION_NUMBER_TRANSACTION_DATA)
+        else:
+            result = self.meta['application_number'] == APPLICATION_NUMBER_TRANSACTION_DATA
+        return result
+    
     
     def describes_master_data(self):
-        return self.meta['application_number'] == APPLICATION_NUMBER_MASTER_DATA
+        return not self.describes_transaction_data()
+    
     
     def from_binary(self, binary_data):
         assert self.meta == None
@@ -82,9 +91,13 @@ class ControlRecord(object):
         bin_line += self.name_abbreviation
         bin_line += self.advisor_number
         bin_line += self.client_number
-        bin_line += self.accounting_number + str(self.accounting_year)[2:]
-        bin_line += '0000' + _short_date(self.date_start)
-        bin_line += _short_date(self.date_end)
+        accounting_nr = '%04d' % int(self.accounting_number)
+        bin_line += accounting_nr + str(self.accounting_year)[2:]
+        if self.describes_transaction_data():
+            bin_line += '0000' + _short_date(self.date_start)
+            bin_line += _short_date(self.date_end)
+        else:
+            bin_line += (' ' * 16)
         bin_line += self.prima_nota_page
         bin_line += self.password
         bin_line += '%05d' % self.number_of_blocks

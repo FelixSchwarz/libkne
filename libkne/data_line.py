@@ -56,9 +56,9 @@ class DataLine(object):
     
     def to_binary(self):
         assert len(str(self.key)) <= 9
-        assert len(self.text) <= 40
-        # TODO: Verdichtung/Korrektur
         text = unicode(self.text).encode('datev_ascii')
+        assert len(text) <= 40
+        # TODO: Verdichtung/Korrektur
         bin_line = 't' + str(self.key) + '\x1e' + text + '\x1c' + 'y'
         return bin_line
 

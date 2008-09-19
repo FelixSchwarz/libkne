@@ -8,7 +8,7 @@ from libkne.controlrecord import ControlRecord
 from libkne.data_line import DataLine
 from libkne.postingline import PostingLine
 from libkne.util import assert_match, assert_true, parse_short_date, \
-    _short_date, parse_number, parse_string
+    _short_date, parse_number, parse_string, APPLICATION_NUMBER_TRANSACTION_DATA
 
 __all__ = ['DataFile']
 
@@ -18,10 +18,21 @@ class DataFile(object):
     def __init__(self, config, version_identifier=None):
         self.config = config
         self.binary_info = None
+        
+        transaction_code = str(APPLICATION_NUMBER_TRANSACTION_DATA)
+        app_nr = str(config.get('application_number', transaction_code))
+        config['application_number'] = app_nr
+        is_transaction_data  = (app_nr == transaction_code)
+        self.contains_transaction_lines = is_transaction_data
+        
         if version_identifier != None:
-            self.binary_info = self._get_complete_feed_line()
-            vid = self._get_versioninfo_for_transaction_data(version_identifier)
-            self.binary_info += vid
+            if self.contains_transaction_data():
+                feedline = self._get_complete_feed_line()
+                vid = self._get_versioninfo_for_transaction_data(version_identifier)
+            else:
+                feedline = self._get_short_feed_line()
+                vid = self._get_versioninfo_for_masterdata(version_identifier)
+            self.binary_info = feedline + vid
         self.lines = []
         self.cr = None
         
@@ -68,6 +79,27 @@ class DataFile(object):
         return bin_line
     
     
+    def _get_short_feed_line(self):
+        start_feed_line = '\x1d'
+        new_feed = '\x18'
+        
+        bin_line = start_feed_line + new_feed
+        bin_line += self.config['version_complete_feed_line']
+        bin_line += '%03d' % self.config['data_carrier_number']
+        bin_line += self.config['application_number']
+        bin_line += self.config['name_abbreviation']
+        bin_line += self.config['advisor_number']
+        bin_line += self.config['client_number']
+        accounting_nr = '%04d' % int(self.config['accounting_number'])
+        bin_line += accounting_nr + str(self.config['accounting_year'])[2:]
+        bin_line += self.config['password']
+        bin_line += self.config['application_info']
+        bin_line += self.config['input_info']
+        bin_line += 'y'
+        assert len(bin_line) == 65
+        return bin_line
+    
+    
     def _get_number_of_blocks(self):
         number_of_bytes = len(self.binary_info)
         number_of_blocks = int(math.ceil(float(number_of_bytes) / 256))
@@ -77,6 +109,15 @@ class DataFile(object):
     
     def _get_versioninfo_for_transaction_data(self, version_identifier):
         bin_versioninfo = '\xb5'
+        # TODO Sachkontonummern-Laenge ev. separat?
+        bin_versioninfo += version_identifier
+        bin_versioninfo += '\x1c' + 'y'
+        assert len(bin_versioninfo) == 13
+        return bin_versioninfo
+    
+    
+    def _get_versioninfo_for_masterdata(self, version_identifier):
+        bin_versioninfo = '\xb6'
         # TODO Sachkontonummern-Laenge ev. separat?
         bin_versioninfo += version_identifier
         bin_versioninfo += '\x1c' + 'y'
@@ -94,8 +135,9 @@ class DataFile(object):
         return True
     
     
-    def build_control_record(self):
+    def build_control_record(self, nr_files):
         cr = ControlRecord()
+        cr.file_no = nr_files + 1
         cr.application_number = self.config['application_number']
         cr.name_abbreviation = self.config['name_abbreviation']
         cr.advisor_number = self.config['advisor_number']
@@ -113,7 +155,10 @@ class DataFile(object):
     
     
     def contains_transaction_data(self):
-        return self.cr.describes_transaction_data()
+        result = self.contains_transaction_lines
+        if hasattr(self, 'cr') and self.cr != None:
+            result = self.cr.describes_transaction_data()
+        return result
     
     
     def _compute_number_of_fill_bytes(self):
@@ -146,7 +191,10 @@ class DataFile(object):
             for line in self.lines:
                 binary_line = line.to_binary()
                 self.binary_info += self._insert_fill_bytes(binary_line)
-            self.binary_info += self._client_total()
+            if self.contains_transaction_data():
+                self.binary_info += self._client_total()
+            else:
+                self.binary_info += 'z'
             self._add_fill_bytes_at_file_end()
             self.open_for_additions = False
     
