@@ -14,7 +14,8 @@ class PostingLine(object):
         self.file_metadata = file_metadata
         
         self.transaction_volume = None
-        self.posting_key = None             # TODO: Write to binary!
+        self.amendment_key = None # TODO
+        self.tax_key = None         # TODO
         self.offsetting_account = None
         self.record_field1 = None
         self.record_field2 = None
@@ -49,13 +50,20 @@ class PostingLine(object):
     def _parse_posting_key(self, data, start_index):
         if data[start_index] == 'l':
             start = start_index + 1
+            print 'posting_key', repr(data[start:start+1])
+            
             posting_key, end_index = parse_number(data, start, start+1)
-            self.posting_key = posting_key
+            posting_key = str(posting_key)
+            assert_true(len(posting_key) in [1, 2])
+            if len(posting_key) == 1:
+                posting_key = "0" + posting_key
+            self.amendment_key = int(posting_key[0]) or None
+            self.tax_key = int(posting_key[1])
             return end_index
         else:
             return start_index - 1
     
-
+    
     def _parse_record_field(self, data, start_index, first_character, attr_name):
         if data[start_index] == first_character:
             start = start_index+1
@@ -219,7 +227,7 @@ class PostingLine(object):
             if dec_places > 2:
                 msg = 'Loosing precision when cutting "%s" to 2 decimal places!'
                 raise ValueError(msg % str(value))
-            bin_volume = '%+d' % (100 * value)
+            bin_volume = '%+d' % int(100 * value)
         else:
             msg = 'unknown type for transaction volume: ' + str(value.__class__)
             raise ValueError(msg)

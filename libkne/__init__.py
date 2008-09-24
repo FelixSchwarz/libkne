@@ -66,6 +66,7 @@ Buchungstext                  posting text
 Buchungszeile                 posting line
 Datenträgerkennsatz           data carrier header
 Datenträgernummer             data carrier number
+Debitor                       debtor
 Finanzbuchhaltung (Fibu)      financial accounting
 Gegenkonto                    offsetting account
 Gespeicherte Sachkontonummernlänge
@@ -74,6 +75,7 @@ Kennziffer                    key
 Konto                         account
 Korrektur                     adjustment
 Kostenstelle (KOST)           cost center
+Kreditor                      supplier
 Mandantenendsumme             client total
 Mandantennummer               client number
 Namenskürzel                  name abbreviation
