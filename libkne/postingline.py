@@ -50,8 +50,6 @@ class PostingLine(object):
     def _parse_posting_key(self, data, start_index):
         if data[start_index] == 'l':
             start = start_index + 1
-            print 'posting_key', repr(data[start:start+1])
-            
             posting_key, end_index = parse_number(data, start, start+1)
             posting_key = str(posting_key)
             assert_true(len(posting_key) in [1, 2])
@@ -245,6 +243,10 @@ class PostingLine(object):
         assert self.cost_center1 == None # not yet implemented
         assert self.cost_center2 == None # not yet implemented
         bin_line = self._transaction_volume_to_binary()
+        if self.amendment_key != None:
+            amendment_key = str(int(self.amendment_key))
+            assert len(amendment_key) == 1
+            bin_line += 'l' + amendment_key + '0'
         assert self.offsetting_account != None
         bin_line += 'a' + str(self.offsetting_account)
         assert len(self.record_field1) <= 12

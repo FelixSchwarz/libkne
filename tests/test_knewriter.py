@@ -142,6 +142,18 @@ class TestPostingLine(unittest.TestCase):
         #print repr(binary_line)
         #print repr(line.to_binary())
         self.assertEqual(binary_line, line.to_binary())
+    
+    
+    def test_amendment_key(self):
+        line = _build_posting_line(amendment_key=2)
+        binary_line = '-11500' + 'l' + '20' + 'a' + '100010000' + '\xbd' + \
+                      'Re526100910' + '\x1c' + '\xbe' + '150102' + \
+                      '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
+                      'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
+                      'EUR' + '\x1c' + 'y'
+        print repr(binary_line)
+        print repr(line.to_binary())
+        self.assertEqual(binary_line, line.to_binary())
 
 
 
