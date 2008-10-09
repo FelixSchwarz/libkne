@@ -14,8 +14,8 @@ class PostingLine(object):
         self.file_metadata = file_metadata
         
         self.transaction_volume = None
-        self.amendment_key = None # TODO
-        self.tax_key = None         # TODO
+        self.amendment_key = None
+        self.tax_key = None         # TODO: write to binary
         self.offsetting_account = None
         self.record_field1 = None
         self.record_field2 = None
