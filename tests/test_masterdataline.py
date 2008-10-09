@@ -19,4 +19,10 @@ class TestMasterdataLine(unittest.TestCase):
         line = DataLine(key=103, text=u'Müller')
         expected_binary = 't' + '103' + '\x1e' + 'M\x81ller' + '\x1c' + 'y'
         self.assertEqual(expected_binary, line.to_binary())
+    
+    def test_replace_unencodable_characters(self):
+        # é is not part of the extended ASCII table defined by DATEV
+        line = DataLine(key=103, text=u'Lenné')
+        expected_binary = 't' + '103' + '\x1e' + 'Lenne' + '\x1c' + 'y'
+        self.assertEqual(expected_binary, line.to_binary())
 

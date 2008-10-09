@@ -9,8 +9,8 @@ __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA',
            'product_abbreviation', 'get_number_of_decimal_places',
            'parse_short_date', 'parse_number', 'parse_number_field', 
            'parse_optional_number_field', 'parse_optional_string_field', 
-           'parse_string', 'parse_string_field',
-           'short_date_to_binary', ]
+           'parse_string', 'parse_string_field', 
+           'replace_unencodable_characters', 'short_date_to_binary', ]
 
 APPLICATION_NUMBER_TRANSACTION_DATA = 11
 APPLICATION_NUMBER_MASTER_DATA      = 13
@@ -19,6 +19,13 @@ product_abbreviation = 'lkne'
 
 def _short_date(date):
     return short_date_to_binary(date)
+
+replacement_table_for_non_datev_characters = {
+    # France
+    u'é': 'e', u'á': 'a', u'à': 'a', u'î': 'i', 
+#    
+#    u'': '', u'': '', u'': '', u'': '', u'': '', u'': '',
+}
 
 # ------------------------------------------------------------------------------
 sciformat_regex = re.compile('^(-?\d+(?:\.\d+)?)(?:E(\+\d+))?$')
@@ -156,6 +163,14 @@ def parse_optional_number_field(data, first_character, start, max_digits):
         value, end_index = parse_number(data, start+1, start + max_digits)
         return (value, end_index)
     return (None, start-1)
+
+
+def replace_unencodable_characters(value):
+    '''Replaces all characters which can not be represented in the (extended)
+    ASCII encoding defined by DATEV by counterparts which look similar.'''
+    for key in replacement_table_for_non_datev_characters:
+        value = value.replace(key, replacement_table_for_non_datev_characters[key])
+    return value
 
 
 def short_date_to_binary(date):

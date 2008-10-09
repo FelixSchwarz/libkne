@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 
-from util import parse_string_field, parse_optional_number_field, parse_number_field
+from util import parse_string_field, parse_optional_number_field, \
+    parse_number_field, replace_unencodable_characters
 
 __all__ = ['DataLine']
 
@@ -25,7 +26,7 @@ class DataLine(object):
     
     
     def __repr__(self):
-        return '%s<%d, "%s", %s>' % (self.__class__.__name__, self.key, repr(self.text), self.aggregation_or_adjustment_key)
+        return '%s<%d, %s, %s>' % (self.__class__.__name__, self.key, repr(self.text), self.aggregation_or_adjustment_key)
     
     
     @classmethod
@@ -56,7 +57,9 @@ class DataLine(object):
     
     def to_binary(self):
         assert len(str(self.key)) <= 9
-        text = unicode(self.text).encode('datev_ascii')
+        #converted_text = unicode(self.text)
+        converted_text = replace_unencodable_characters(unicode(self.text))
+        text = converted_text.encode('datev_ascii')
         assert len(text) <= 40, repr(text)
         # TODO: Verdichtung/Korrektur
         bin_line = 't' + str(self.key) + '\x1e' + text + '\x1c' + 'y'
