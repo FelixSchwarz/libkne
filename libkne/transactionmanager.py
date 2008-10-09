@@ -2,7 +2,8 @@
 
 from copy import copy
 
-from datafile import DataFile
+from libkne.datafile import DataFile
+from libkne.util import APPLICATION_NUMBER_MASTER_DATA, APPLICATION_NUMBER_TRANSACTION_DATA
 
 __all__ = ['TransactionManager']
 
@@ -20,7 +21,7 @@ class TransactionManager(object):
     def append_masterdata_line(self, line):
         if len(self.masterdata_files) == 0:
             data_config = copy(self.config)
-            data_config['application_number'] = 13
+            data_config['application_number'] = APPLICATION_NUMBER_MASTER_DATA
             data_config['accounting_number'] = 189
             new_file = DataFile(data_config, self.version_identifier)
             self.masterdata_files.append(new_file)
@@ -31,7 +32,7 @@ class TransactionManager(object):
     def append_posting_line(self, line):
         if len(self.transaction_files) == 0:
             data_config = copy(self.config)
-            data_config['application_number'] = 11
+            data_config['application_number'] = APPLICATION_NUMBER_TRANSACTION_DATA
             new_file = DataFile(data_config, self.version_identifier)
             self.transaction_files.append(new_file)
         tf = self.transaction_files[-1]

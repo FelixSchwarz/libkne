@@ -68,7 +68,6 @@ class TestKNEAddress(unittest.TestCase):
         kneaddr = KNEAddress(True, 10001)
         kneaddr.name = ' F' + 'o' * 38 + ' ' + 'Bar '
         lines = kneaddr.build_masterdata_lines()
-        print 'lines', lines
         self.assertEqual(4, len(lines))
         self._assert_line_contents([(103, 'F' + 'o'*38 + ' '), (203, 'Bar')], 
                                    lines[2:])
