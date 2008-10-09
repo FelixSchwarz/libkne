@@ -116,6 +116,7 @@ class KNEAddress(object):
                 
                 if not isinstance(value, basestring):
                     value = unicode(value)
+                value = value.strip()
                 for i in range(number_of_items):
                     
                     start_index = i * 40
@@ -131,8 +132,30 @@ class KNEAddress(object):
                         msg = base_msg % (base_name, part_value, part_key, existing_value)
                         raise ValueError(msg)
                     setattr(self, part_key, part_value)
-            
-            
+    
+    
+    def _is_part_of_compound_attribute(self, attrname):
+        return (attrname[-1] in ['1', '2'])
+    
+    
+    def _build_line_for_attrname(self, attrname, special_keys):
+        value = getattr(self, attrname)
+        key = attr_codes[attrname]
+        
+        line = None
+        if value not in [None, ''] and attrname not in special_keys:
+            if not isinstance(value, basestring):
+                value = unicode(value)
+            if not self._is_part_of_compound_attribute(attrname):
+                value = value.strip()
+            if len(value) > 40:
+                value = value[:40]
+                base_msg = 'Line for attribute "%s" too long, cutting string: "%s..."'
+                msg = base_msg % (attrname, value)
+                log.warn(msg)
+            assert len(value) <= 40
+            line = DataLine(key=key, text=value)
+        return line
     
     
     def build_masterdata_lines(self):
@@ -147,21 +170,8 @@ class KNEAddress(object):
         self._put_values_for_basenames_into_normal_attributes()
         
         for name in self._attrnames_sorted_by_key:
-            value = getattr(self, name)
-            key = attr_codes[name]
-            
-            if value not in [None, ''] and name not in special_keys:
-                #key_value_pairs = self._split_long_values(name, value)
-                
-                if not isinstance(value, basestring):
-                    value = unicode(value)
-                if len(value) > 40:
-                    value = value[:40]
-                    base_msg = 'Line for attribute "%s" too long, cutting string: "%s..."'
-                    msg = base_msg % (name, value)
-                    log.warn(msg)
-                assert len(value) <= 40
-                line = DataLine(key=key, text=value)
+            line = self._build_line_for_attrname(name, special_keys)
+            if line != None:
                 lines.append(line)
         return lines
 

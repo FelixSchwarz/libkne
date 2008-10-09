@@ -46,6 +46,32 @@ class TestKNEAddress(unittest.TestCase):
         self.assertEqual(4, len(lines))
         self._assert_line_contents([(103, 'y'*40), (203, 'x'*30 + 'z'*10)], 
                                    lines[2:])
+    
+    
+    def test_strip_whitespace_distributed_values(self):
+        kneaddr = KNEAddress(True, 10001)
+        kneaddr.name = ' Foo Bar '
+        lines = kneaddr.build_masterdata_lines()
+        self.assertEqual(3, len(lines))
+        self._assert_line_contents([(103, 'Foo Bar')], lines[2:])
+    
+    
+    def test_strip_whitespace_in_normal_values(self):
+        kneaddr = KNEAddress(True, 10001)
+        kneaddr.degree = ' Ph.D. '
+        lines = kneaddr.build_masterdata_lines()
+        self.assertEqual(3, len(lines))
+        self._assert_line_contents([(801, 'Ph.D.')], lines[2:])
+    
+    
+    def test_no_not_strip_whitespace_within_distributed_values(self):
+        kneaddr = KNEAddress(True, 10001)
+        kneaddr.name = ' F' + 'o' * 38 + ' ' + 'Bar '
+        lines = kneaddr.build_masterdata_lines()
+        print 'lines', lines
+        self.assertEqual(4, len(lines))
+        self._assert_line_contents([(103, 'F' + 'o'*38 + ' '), (203, 'Bar')], 
+                                   lines[2:])
 
 
 
