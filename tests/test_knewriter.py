@@ -106,6 +106,11 @@ class TestPostingLine(unittest.TestCase):
         self.assertRaises(ValueError, line.to_binary)
     
     
+    def test_no_posting_line_with_zero_transaction_volume(self):
+        line = _build_posting_line(transaction_volume=0)
+        self.assertRaises(ValueError, line.to_binary)
+    
+    
     def test_invalid_characters_in_record_line(self):
         line = _build_posting_line(record_field1='abcödef')
         self.assertRaises(ValueError, line.to_binary)

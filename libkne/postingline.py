@@ -229,6 +229,8 @@ class PostingLine(object):
         else:
             msg = 'unknown type for transaction volume: ' + str(value.__class__)
             raise ValueError(msg)
+        if value == 0:
+            raise ValueError('Transaction volume must not be zero!')
         return bin_volume
     
     
