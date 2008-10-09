@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 
+import copy
 import datetime
+from datetime import date
 from decimal import Decimal
 import StringIO
 import unittest
@@ -25,13 +27,17 @@ def _default_config():
 def _build_kne_writer(config=None, header_fp=None):
     if config == None:
         config = _default_config()
-    data_fp = StringIO.StringIO()
-    data_fp_builder = lambda x: data_fp
+    data_fps = []
+    def new_data_fp(x):
+        data_fp = StringIO.StringIO()
+        data_fps.append(data_fp)
+        return data_fp
+    data_fp_builder = new_data_fp
     if header_fp == None:
         header_fp = StringIO.StringIO()
     writer = KneWriter(header_fp=header_fp, data_fp_builder=data_fp_builder,
                        config=config)
-    return (writer, data_fp)
+    return (writer, data_fps)
 
 
 def _build_posting_line(**kwargs):
@@ -156,8 +162,8 @@ class TestPostingLine(unittest.TestCase):
                       '\x1c' + 'd' + '101' + 'e' + '84000000' + '\x1e' + \
                       'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
                       'EUR' + '\x1c' + 'y'
-        print repr(binary_line)
-        print repr(line.to_binary())
+        #print repr(binary_line)
+        #print repr(line.to_binary())
         self.assertEqual(binary_line, line.to_binary())
 
 
@@ -165,7 +171,8 @@ class TestPostingLine(unittest.TestCase):
 class TestKneWritingSimpleTransactionData(unittest.TestCase):
     def setUp(self):
         self.header_fp = StringIO.StringIO()
-        self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
+        self.writer, self.data_fps = _build_kne_writer(header_fp=self.header_fp)
+        self.data_fp = None
     
     
     def _assemble_transaction_data(self):
@@ -175,14 +182,16 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         self.writer.finish()
         
         self.header_fp.seek(0)
-        self.data_fp.seek(0)
+        for data_fp in self.data_fps:
+            data_fp.seek(0)
+            self.data_fp = data_fp
     
     
     def _check_header_file(self, binary_header):
         data_carrier = '001' + '   ' + '1234567' + 'Datev eG ' + ' ' + \
                        '00001' + '00001' + (' ' * 95)
         control_record = 'V' + '00001' + '11' + 'FS' + '1234567' + '00042' + \
-                         '000108' + '0000040204' + '290204' + '001' + '    ' + \
+                         '000108' + '0000010108' + '010108' + '001' + '    ' + \
                          '00002' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
                          (' ' * 53)
         self.assertEqual(128, len(control_record))
@@ -197,7 +206,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
     def _check_complete_feed_line(self, binary_data):
         expected_feed_line = '\x1d' + '\x18' + '1' + '001' + '11' + 'FS' + \
                              '1234567' + '00042' + '000108' + \
-                             '040204' + '290204' + '001' + '    ' + \
+                             '010108' + '010108' + '001' + '    ' + \
                              (' ' * 16) + (' ' * 16) + 'y'
         self.assertEqual(80, len(expected_feed_line))
         #print repr(expected_feed_line)
@@ -257,7 +266,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
 
     def test_read_dogfood(self):
         self._assemble_transaction_data()
-        self.reader = KneReader(self.header_fp, [self.data_fp])
+        self.reader = KneReader(self.header_fp, self.data_fps)
 
         tfile = self.reader.get_file(0)
         lines = tfile.get_posting_lines()
@@ -267,7 +276,7 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
         self.assertEqual(100010000, line1.offsetting_account)
         self.assertEqual('Re526100910', line1.record_field1)
         self.assertEqual('150102', line1.record_field2)
-        self.assertEqual(datetime.date(2004, 01, 01), line1.date)
+        self.assertEqual(datetime.date(2008, 01, 01), line1.date)
         self.assertEqual(84000000, line1.account_number)
         self.assertEqual('AR mit UST-Automatikkonto', line1.posting_text)
         self.assertEqual('EUR', line1.currency_code_transaction_volume)
@@ -277,7 +286,8 @@ class TestKneWritingSimpleTransactionData(unittest.TestCase):
 class TestKneWritingSimpleMasterData(unittest.TestCase):
     def setUp(self):
         self.header_fp = StringIO.StringIO()
-        self.writer, self.data_fp = _build_kne_writer(header_fp=self.header_fp)
+        self.writer, self.data_fps = _build_kne_writer(header_fp=self.header_fp)
+        self.data_fp = None
     
     
     def _assemble_masterdata(self):
@@ -286,7 +296,9 @@ class TestKneWritingSimpleMasterData(unittest.TestCase):
         self.writer.finish()
         
         self.header_fp.seek(0)
-        self.data_fp.seek(0)
+        for data_fp in self.data_fps:
+            data_fp.seek(0)
+            self.data_fp = data_fp
     
     
     def _check_header_file(self, binary_header):
@@ -334,4 +346,46 @@ class TestKneWritingSimpleMasterData(unittest.TestCase):
         self._check_short_feed_line(binary_data[:65])
         self._check_version_string(binary_data[65:78])
 
+
+
+class TestKneWritingTransactionDataFromDifferentFinancialYears(unittest.TestCase):
+    def setUp(self):
+        self.header_fp = StringIO.StringIO()
+        self.writer, self.data_fps = _build_kne_writer(header_fp=self.header_fp)
+        self.data_fp = None
+    
+    
+    def _assemble_transaction_data(self):
+        first_line = _build_posting_line()
+        first_line.date = date(2005, 1, 1)
+        self.writer.add_posting_line(first_line)
+        
+        second_line = copy.copy(first_line)
+        second_line.date = date(2008, 1, 1)
+        assert first_line.date.year != second_line.date.year
+        self.writer.add_posting_line(second_line)
+        self.writer.finish()
+        
+        self.header_fp.seek(0)
+        for data_fp in self.data_fps:
+            data_fp.seek(0)
+            self.data_fp = data_fp
+
+
+    def test_read_dogfood(self):
+        self._assemble_transaction_data()
+        self.reader = KneReader(self.header_fp, self.data_fps)
+        
+        self.assertEqual(2, self.reader.get_number_of_files())
+        
+        tfile1 = self.reader.get_file(0)
+        lines_in_first_year = tfile1.get_posting_lines()
+        self.assertEqual(1, len(lines_in_first_year))
+        self.assertEqual(date(2005, 01, 01), lines_in_first_year[0].date)
+        
+        tfile2 = self.reader.get_file(1)
+        lines_in_second_year = tfile2.get_posting_lines()
+        self.assertEqual(1, len(lines_in_second_year))
+        self.assertEqual(date(2008, 01, 01), lines_in_second_year[0].date)
+        
 

@@ -24,19 +24,12 @@ class DataFile(object):
         config['application_number'] = app_nr
         is_transaction_data  = (app_nr == transaction_code)
         self.contains_transaction_lines = is_transaction_data
+        self.version_identifier = version_identifier
         
-        if version_identifier != None:
-            if self.contains_transaction_data():
-                feedline = self._get_complete_feed_line()
-                vid = self._get_versioninfo_for_transaction_data(version_identifier)
-            else:
-                feedline = self._get_short_feed_line()
-                vid = self._get_versioninfo_for_masterdata(version_identifier)
-            self.binary_info = feedline + vid
         self.lines = []
         self.cr = None
         
-        self.open_for_additions = (self.binary_info != None)
+        self.open_for_additions = True
         self.number_of_blocks = None
     
     
@@ -129,8 +122,19 @@ class DataFile(object):
         '''Append a new line to this file (only if to_binary() was not called 
         before on this file!). Return True if the line was appended 
         successfully else False. If False, no more lines can be appended to 
-        this file.'''
-        assert self.open_for_additions
+        this file.
+        If this file contains transaction data and the new line belongs to 
+        another financial year, a ValueError is raised.'''
+        assert_true(self.open_for_additions)
+        if self.contains_transaction_data():
+            assert_true(self.may_add_transactions_for(line.date))
+            date_start = self.config['date_start']
+            if (date_start == None) or (date_start > line.date):
+                self.config['date_start'] = line.date
+            date_end = self.config['date_end']
+            if (date_end == None) or (date_end < line.date):
+                self.config['date_end'] = line.date
+        
         self.lines.append(line)
         return True
     
@@ -295,6 +299,20 @@ class DataFile(object):
         return end_index + 1
     
     
+    def may_add_transactions_for(self, date_for_new_line):
+        '''Returns True if transactions for this date may be added to this data 
+        file, otherwise False. Transactions in one data file must all belong to 
+        the same financial year. Currently it is assumed that the financial
+        year is the same as the calendar year.
+        Raises a ValueError if this file does not contain transaction data.'''
+        assert_true(self.contains_transaction_data())
+        same_financial_year = True
+        if len(self.lines) > 0:
+            year_for_new_line = date_for_new_line.year
+            same_calendar_year = (self.lines[0].date.year == year_for_new_line)
+            same_financial_year = same_calendar_year
+        return same_financial_year
+    
     def more_posting_lines(self, binary_data, end_index):
         return (binary_data[end_index] not in ['x', 'w'])
     
@@ -346,6 +364,7 @@ class DataFile(object):
     def from_binary(self, binary_control_record, data_fp):
         '''Takes a binary control record and a file-like object which contains
         the data and parses them.'''
+        self.open_for_additions = False 
         cr = ControlRecord()
         cr.from_binary(binary_control_record)
         self.cr = cr
@@ -385,6 +404,15 @@ class DataFile(object):
     
     
     def to_binary(self):
+        if self.version_identifier != None:
+            if self.contains_transaction_data():
+                feedline = self._get_complete_feed_line()
+                vid = self._get_versioninfo_for_transaction_data(self.version_identifier)
+            else:
+                feedline = self._get_short_feed_line()
+                vid = self._get_versioninfo_for_masterdata(self.version_identifier)
+            self.binary_info = feedline + vid
+        
         self.finish()
         self.number_of_blocks = self._get_number_of_blocks()
         return self.binary_info

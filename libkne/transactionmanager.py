@@ -30,13 +30,20 @@ class TransactionManager(object):
     
     
     def append_posting_line(self, line):
-        if len(self.transaction_files) == 0:
+        transaction_file = None
+        if len(self.transaction_files) > 0:
+            for tf in self.transaction_files:
+                if tf.may_add_transactions_for(line.date):
+                    transaction_file = tf
+                    break
+        if transaction_file == None:
             data_config = copy(self.config)
             data_config['application_number'] = APPLICATION_NUMBER_TRANSACTION_DATA
-            new_file = DataFile(data_config, self.version_identifier)
-            self.transaction_files.append(new_file)
-        tf = self.transaction_files[-1]
-        assert tf.append_line(line)
+            data_config['date_start'] = None
+            data_config['date_end'] = None
+            transaction_file = DataFile(data_config, self.version_identifier)
+            self.transaction_files.append(transaction_file)
+        assert transaction_file.append_line(line)
     
     
     def finish(self):
