@@ -1,6 +1,11 @@
 # -*- coding: UTF-8 -*-
 
+import logging
+
 from libkne import DataLine
+
+
+log = logging.getLogger(__name__)
 
 __all__ = ["KNEAddress"]
 
@@ -30,6 +35,12 @@ attr_codes = \
 
 class KNEAddress(object):
     
+    def _assert_no_unused_kw_arguments(self, kwargs):
+        if len(kwargs.keys()) > 0:
+            first_kw = kwargs.keys()[0]
+            raise ValueError("Unknown keyword parameter '%s'" % first_kw)
+    
+    
     def __init__(self, new_record, account_number, **kwargs):
         assert new_record in [True, False], 'new_record must in [True, False], not %s' % new_record
         assert account_number not in ['', None], 'account number must not be empty'
@@ -41,7 +52,7 @@ class KNEAddress(object):
             value = kwargs.pop(name, None)
             if not hasattr(self, name):
                 setattr(self, name, value)
-        assert len(kwargs.keys()) == 0, kwargs
+        self._assert_no_unused_kw_arguments(kwargs)
     
     
     def build_masterdata_lines(self):
@@ -58,6 +69,12 @@ class KNEAddress(object):
             value = getattr(self, name)
             key = attr_codes[name]
             if value not in [None, ''] and name not in special_keys:
+                if len(value) > 40:
+                    value = value[:40]
+                    base_msg = 'Line for attribute "%s" too long, cutting string: "%s..."'
+                    msg = base_msg % (name, value)
+                    log.warn(msg)
+                    print msg
                 line = DataLine(key=key, text=value)
                 lines.append(line)
         return lines
