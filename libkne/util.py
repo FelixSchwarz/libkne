@@ -117,20 +117,21 @@ def parse_number(data, start_index, max_end_index, restrict_number_length=None):
     return (int(string_number), end_index)
 
 
-def parse_string(data, start_index, max_end_index=None):
-    '''Reads all characters until \x1c is read or max_end_index is reached.'''
+def parse_string(data, start_index, max_end_index=None, stop_character='\x1c'):
+    '''Reads all characters until the stop character (default '\x1c') is read 
+    or max_end_index is reached.'''
     read_string = ''
     if max_end_index != None:
         for i in range(start_index, max_end_index+1+1):
-            if data[i] == '\x1c':
+            if data[i] == stop_character:
                 break
             read_string += data[i]
     else:
         i = start_index
-        while i < len(data) and data[i] != '\x1c':
+        while i < len(data) and data[i] != stop_character:
             read_string += data[i]
             i += 1
-    assert_match('\x1c', data[i], data[i])
+    assert_match(stop_character, data[i], data[i])
     end_index = start_index + len(read_string) - 1 + 1
     return (read_string, end_index)
 

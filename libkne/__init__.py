@@ -93,6 +93,7 @@ Umsatzsteuer                  sales tax
 Verdichtung                   aggregation
 Versionskennung               version identifier
 Versionssatz                  version record
+Verwaltungsdatei              control file
 Verwaltungssatz               control record
 Vollvorlauf                   complete feed line
 Vorsteuer                     input tax

@@ -1,7 +1,8 @@
 # -*- coding: UTF-8 -*-
 
-from util import APPLICATION_NUMBER_TRANSACTION_DATA, \
-    APPLICATION_NUMBER_MASTER_DATA, parse_short_date, _short_date
+from libkne.util import APPLICATION_NUMBER_TRANSACTION_DATA, \
+    APPLICATION_NUMBER_MASTER_DATA, assert_match, parse_short_date, \
+    parse_string, _short_date
 
 
 __all__ = ['ControlRecord']
@@ -69,12 +70,12 @@ class ControlRecord(object):
         meta['last_prima_nota_page'] = int(binary_data[56:59])
         assert binary_data[59] == ' '
         assert binary_data[60] == '1'
-        meta['version_info'] = binary_data[61:71]
-        # specification says 'linksbündig, mit 4 Leerzeichen aufgefüllt.'
-        # is this really always 4 spaces or is this just the filling if you 
-        # use the 'default'(?) '1,4,4,SELF'?
-        assert binary_data[71:75] == '    '
-        assert ' ' * 53 == binary_data[75:128]
+        
+        version_info, end_index = \
+            parse_string(binary_data, 61, max_end_index=128, stop_character=' ')
+        meta['version_info'] = version_info
+        nr_spaces = 128 - end_index
+        assert ' ' * nr_spaces == binary_data[end_index:128]
         
         return meta
     

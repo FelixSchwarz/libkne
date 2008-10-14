@@ -284,13 +284,15 @@ class DataFile(object):
         # long so the version info for transaction data is 13 bytes in total
         # (5.3.2, p. 152).
         # Unfortunately, DATEV Rechnungswesen may produce files with additional
-        # spaces after their 'REWE' identification...
+        # spaces after their 'REWE' identification... 
+        # Furthermore 'Kanzlei Rechnungswesen' uses 6 Bytes for their product
+        # abbreviation (KAREWE).
         product_abbreviation, end_index = parse_string(binary_data, 7)
         if len(product_abbreviation) > 4:
-            msg_template = 'Product abbreviation is longer than 4 bytes: "%s"'
+            msg_template = 'Product abbreviation is longer than 4 bytes: %s'
             warnings.warn(msg_template % repr(product_abbreviation), UserWarning)
         product_abbreviation = product_abbreviation.strip()
-        assert_true(re.match('^[\w0-9\-]{4}$', product_abbreviation) != None, 
+        assert_true(re.match('^[\w0-9\-]{4,}$', product_abbreviation) != None, 
                     product_abbreviation)
         self.config['product_abbreviation'] = product_abbreviation
         
