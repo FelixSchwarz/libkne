@@ -60,7 +60,8 @@ class DataFile(object):
         bin_line += self.config['name_abbreviation']
         bin_line += self.config['advisor_number']
         bin_line += self.config['client_number']
-        bin_line += self.config['accounting_number'] + str(self.config['accounting_year'])[2:]
+        year2k = str(self.config['accounting_year'])[2:]
+        bin_line += self.config['accounting_number'] + year2k
         bin_line += _short_date(self.config['date_start'])
         bin_line += _short_date(self.config['date_end'])
         bin_line += self.config['prima_nota_page']
@@ -134,6 +135,9 @@ class DataFile(object):
             date_end = self.config['date_end']
             if (date_end == None) or (date_end < line.date):
                 self.config['date_end'] = line.date
+            
+            # Short feed line must contain the same year as the transaction data
+            self.config['accounting_year'] = line.date.year
         
         self.lines.append(line)
         return True
