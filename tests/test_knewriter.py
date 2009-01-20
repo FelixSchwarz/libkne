@@ -11,6 +11,8 @@ import unittest
 from libkne import DataLine, KneWriter, KneReader, PostingLine
 
 
+current_year2k = str(date.today().year)[-2:]
+
 def _default_config():
     config = {}
     config['advisor_number'] = 1234567
@@ -78,7 +80,8 @@ def _default_binary_posting_line(with_ammount=True):
                    'AR mit UST-Automatikkonto' + '\x1c' + '\xb3' + \
                    'EUR' + '\x1c' + 'y'
     return binary_line
-    
+
+
 
 class TestPostingLine(unittest.TestCase):
     
@@ -306,9 +309,9 @@ class TestKneWritingSimpleMasterData(unittest.TestCase):
                        '00001' + '00001' + (' ' * 95)
         # TODO: Ev. abrechnungsnummer entfernen
         control_record = 'V' + '00001' + '13' + 'FS' + '1234567' + '00042' + \
-                         '018908' + '          ' + '      ' + '001' + '    ' + \
-                         '00001' + '001' + ' ' + '1' + '1,8,8,lkne    ' + \
-                         (' ' * 53)
+                         '0189' + current_year2k + '          ' + '      ' + \
+                         '001' + '    ' + '00001' + '001' + ' ' + '1' + \
+                         '1,8,8,lkne    ' + (' ' * 53)
         self.assertEqual(128, len(control_record))
         expected_binary = data_carrier + control_record
         self.assertEqual(256, len(expected_binary))
@@ -320,11 +323,11 @@ class TestKneWritingSimpleMasterData(unittest.TestCase):
     
     def _check_short_feed_line(self, binary_data):
         expected_feed_line = '\x1d' + '\x18' + '1' + '001' + '13' + 'FS' + \
-                             '1234567' + '00042' + '018908' + \
+                             '1234567' + '00042' + '0189' + current_year2k + \
                              '    ' + (' ' * 16) + (' ' * 16) + 'y'
         self.assertEqual(65, len(expected_feed_line))
-        print repr(expected_feed_line)
-        print repr(binary_data)
+        #print repr(expected_feed_line)
+        #print repr(binary_data)
         self.assertEquals(expected_feed_line, binary_data)
     
     
@@ -387,5 +390,5 @@ class TestKneWritingTransactionDataFromDifferentFinancialYears(unittest.TestCase
         lines_in_second_year = tfile2.get_posting_lines()
         self.assertEqual(1, len(lines_in_second_year))
         self.assertEqual(date(2008, 01, 01), lines_in_second_year[0].date)
-        
+
 
