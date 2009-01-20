@@ -1,8 +1,11 @@
 # -*- coding: UTF-8 -*-
 
+import logging
 import unittest
 
 from libkne.model import KNEAddress
+
+logging.basicConfig(level=logging.ERROR)
 
 
 class TestKNEAddress(unittest.TestCase):
