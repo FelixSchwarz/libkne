@@ -47,7 +47,7 @@ class PostingLine(object):
         return end_index
     
     
-    def _parse_posting_key(self, data, start_index):
+    def _parse_amendment_key(self, data, start_index):
         if data[start_index] == 'l':
             start = start_index + 1
             amendment_key, end_index = parse_number(data, start, start+1)
@@ -175,7 +175,7 @@ class PostingLine(object):
         data = binary_data[start_index:]
         line = cls(file_metadata=metadata)
         end_index = line._parse_transaction_volume(data)
-        end_index = line._parse_posting_key(data, end_index+1)
+        end_index = line._parse_amendment_key(data, end_index+1)
         
         account_no_length = line.file_metadata.get('stored_general_ledger_account_no_length')
         # sub-ledger account numbers contain 1 digit more than general ledger
