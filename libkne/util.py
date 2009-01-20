@@ -7,9 +7,9 @@ __all__ = ['APPLICATION_NUMBER_TRANSACTION_DATA',
            'APPLICATION_NUMBER_MASTER_DATA', '_short_date', 
            'assert_match', 'assert_true', 
            'product_abbreviation', 'get_number_of_decimal_places',
-           'parse_short_date', 'parse_number', 'parse_number_field', 
-           'parse_optional_number_field', 'parse_optional_string_field', 
-           'parse_string', 'parse_string_field', 
+           'is_debtor_account', 'parse_short_date', 'parse_number', 
+           'parse_number_field', 'parse_optional_number_field', 
+           'parse_optional_string_field', 'parse_string', 'parse_string_field', 
            'replace_unencodable_characters', 'short_date_to_binary', ]
 
 APPLICATION_NUMBER_TRANSACTION_DATA = 11
@@ -82,6 +82,17 @@ def assert_true(condition, additional_data=None):
     exception.
     This method won't be optimized out like assert statements in pyo files.'''
     assert_match(True, condition, additional_data=additional_data)
+
+
+def is_debtor_account(account_nr, general_ledger_account_number_length=4):
+    '''Return True if the account_nr is a debtor account number in the DATEV
+    accounting plain SKR03/04, else False.'''
+    min_debtor_account_nr = 10 ** (general_ledger_account_number_length - 1)
+    if min_debtor_account_nr <= account_nr:
+        max_debtor_account_nr = 7 * min_debtor_account_nr - 1
+        if account_nr <= max_debtor_account_nr:
+            return True
+    return False
 
 
 def parse_short_date(binary_data):
