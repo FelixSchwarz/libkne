@@ -75,7 +75,7 @@ def assert_match(expected, real_data, additional_data=None):
     if not (expected == real_data):
         msg = '%s != %s' % (repr(expected), repr(real_data))
         if additional_data != None:
-            msg += ' ("%s")' % repr(additional_data)
+            msg += ' (%s)' % repr(additional_data)
         raise ValueError(msg)
 
 
@@ -158,7 +158,7 @@ def parse_optional_string_field(data, first_character, start, max_characters):
 
 
 def parse_string_field(data, first_character, start, max_characters):
-    assert first_character == data[start]
+    assert_match(first_character, data[start])
     value, end_index = parse_string(data, start+1, start+max_characters)
     return (value, end_index)
 

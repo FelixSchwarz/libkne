@@ -5,6 +5,7 @@ import re
 import warnings
 
 from libkne.controlrecord import ControlRecord
+from libkne.custom_info_record import CustomInfoRecord
 from libkne.data_line import DataLine
 from libkne.postingline import PostingLine
 from libkne.util import assert_match, assert_true, parse_short_date, \
@@ -197,8 +198,8 @@ class DataFile(object):
     def finish(self):
         if self.open_for_additions:
             for line in self.lines:
-                binary_line = line.to_binary()
-                self.binary_info += self._insert_fill_bytes(binary_line)
+                for posting_line in line.to_binary():
+                    self.binary_info += self._insert_fill_bytes(posting_line)
             if self.contains_transaction_data():
                 self.binary_info += self._client_total()
             else:
@@ -320,7 +321,34 @@ class DataFile(object):
         return same_financial_year
     
     def more_posting_lines(self, binary_data, end_index):
-        return (binary_data[end_index] not in ['x', 'w'])
+        if (end_index < len(binary_data)) and \
+            (binary_data[end_index] not in ['x', 'w']):
+            return True
+        return False
+    
+    
+    def more_custom_info_records(self, binary_data, start_index):
+        """Return True if there are custom info records available in 
+        binary_data at the offset start_index."""
+        if start_index < len(binary_data) and binary_data[start_index] == '\xb7':
+            return True
+        return False
+    
+    
+    def _parse_custom_info_records(self, binary_data, start_index, line):
+        end_index = start_index
+        while self.more_custom_info_records(binary_data, end_index):
+            record, end_index = \
+                CustomInfoRecord.from_binary(binary_data, end_index)
+            line.custom_info_records.append(record)
+            end_index += 1
+        # In the last round of the loop we increment the counter although the 
+        # loop condition fails afterwards so we need to decrement the end_index.
+        # This holds also true if we did not parse any data, because then we 
+        # need to fake the end_index so that the character at start_index is 
+        # passed to the next function
+        end_index -= 1
+        return end_index
     
     
     def _check_client_total(self, binary_data, start_index):
@@ -337,12 +365,12 @@ class DataFile(object):
     def _parse_transactions(self, binary_data, start_index, metadata):
         end_index = start_index - 1
         while True:
-            # There can be multiple subtotals between the lines so we must on
+            # There can be multiple subtotals between the lines so we must 
             # break if we really reached 'client total'
-            while (start_index < len(binary_data)) and \
-                (self.more_posting_lines(binary_data, start_index)):
+            while self.more_posting_lines(binary_data, start_index):
                 line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
                 self.lines.append(line)
+                end_index = self._parse_custom_info_records(binary_data, end_index+1, line)
                 start_index = end_index + 1
             end_index = self._check_client_total(binary_data, end_index+2)
             if binary_data[end_index] != 'z':

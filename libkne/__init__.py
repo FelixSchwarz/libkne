@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 
+from custom_info_record import *
 from data_line import *
 from knereader import *
 from knefilereader import *
@@ -100,6 +101,7 @@ Vorsteuer                     input tax
 Währungskennzeichen           currency code
 Währungskurs                  exchange rate
 Wirtschaftsjahr               financial year
+Zusatzinfosatz                custom info record
 Zustellzusatz                 additional delivery information
 Zwischensumme                 subtotal
 '''

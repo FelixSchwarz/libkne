@@ -34,6 +34,8 @@ class PostingLine(object):
         self.base_currency = None           # TODO: Write to binary!
         self.exchange_rate = None           # TODO: Write to binary!
         
+        self.custom_info_records = []
+        
         char_re = '([^0-9a-zA-Z\$%&*\+-/])'
         self.record_field_valid_characters = re.compile(char_re)
     
@@ -241,7 +243,8 @@ class PostingLine(object):
     
     
     def to_binary(self):
-        'Return the binary KNE format for the specified data.'
+        """Return a list of multiple lines containing binary KNE format for this
+        posting line."""
         assert self.cost_center1 == None # not yet implemented
         assert self.cost_center2 == None # not yet implemented
         bin_line = self._transaction_volume_to_binary()
@@ -267,5 +270,9 @@ class PostingLine(object):
         assert currency_code.upper() == currency_code
         bin_line += '\xb3' + currency_code + '\x1c'
         bin_line += 'y'
-        return bin_line
+        
+        binary_lines = [bin_line]
+        for record in self.custom_info_records:
+            binary_lines.append(record.to_binary())
+        return binary_lines
 

@@ -8,8 +8,7 @@ import StringIO
 import unittest
 
 
-from libkne import DataLine, KneWriter, KneReader, PostingLine
-
+from libkne import CustomInfoRecord, DataLine, KneWriter, KneReader, PostingLine
 
 current_year2k = str(date.today().year)[-2:]
 
@@ -93,13 +92,13 @@ class TestPostingLine(unittest.TestCase):
     def test_negative_transaction_volume(self):
         line = _build_posting_line()
         expected_binary = '-11500' + self.posting_line_with_transaction_volume
-        self.assertEqual(expected_binary, line.to_binary())
+        self.assertEqual([expected_binary], line.to_binary())
     
     
     def test_positive_transaction_volume(self):
         line = _build_posting_line(transaction_volume=+4711)
         expected_binary = '+471100' + self.posting_line_with_transaction_volume
-        self.assertEqual(expected_binary, line.to_binary())
+        self.assertEqual([expected_binary], line.to_binary())
     
     
     def test_decimal_transaction_volume(self):
@@ -107,7 +106,7 @@ class TestPostingLine(unittest.TestCase):
         expected_binary = '-4312' + self.posting_line_with_transaction_volume
         #print repr(expected_binary)
         #print repr(line.to_binary())
-        self.assertEqual(expected_binary, line.to_binary())
+        self.assertEqual([expected_binary], line.to_binary())
     
     
     def test_invalid_decimal_transaction_volume(self):
@@ -138,7 +137,7 @@ class TestPostingLine(unittest.TestCase):
                       '\xb3' + 'EUR' + '\x1c' + 'y'
         #print repr(binary_line)
         #print repr(line.to_binary())
-        self.assertEqual(binary_line, line.to_binary())
+        self.assertEqual([binary_line], line.to_binary())
     
     
     def test_invalid_characters_in_posting_text(self):
@@ -155,7 +154,7 @@ class TestPostingLine(unittest.TestCase):
                       'EUR' + '\x1c' + 'y'
         #print repr(binary_line)
         #print repr(line.to_binary())
-        self.assertEqual(binary_line, line.to_binary())
+        self.assertEqual([binary_line], line.to_binary())
     
     
     def test_amendment_key(self):
@@ -167,7 +166,7 @@ class TestPostingLine(unittest.TestCase):
                       'EUR' + '\x1c' + 'y'
         #print repr(binary_line)
         #print repr(line.to_binary())
-        self.assertEqual(binary_line, line.to_binary())
+        self.assertEqual([binary_line], line.to_binary())
 
 
 
@@ -392,3 +391,38 @@ class TestKneWritingTransactionDataFromDifferentFinancialYears(unittest.TestCase
         self.assertEqual(date(2008, 01, 01), lines_in_second_year[0].date)
 
 
+
+class TestKneWriteAndParsePostingLinesWithCustomInfo(unittest.TestCase):
+    def setUp(self):
+        self.header_fp = StringIO.StringIO()
+        self.writer, self.data_fps = _build_kne_writer(header_fp=self.header_fp)
+        self.data_fp = None
+    
+    def _assemble_transaction_data(self, custom_info_records=None):
+        line = _build_posting_line()
+        if custom_info_records != None:
+            for record in custom_info_records:
+                line.custom_info_records.append(record)
+        self.writer.add_posting_line(line)
+        self.writer.finish()
+        
+        self.header_fp.seek(0)
+        for data_fp in self.data_fps:
+            data_fp.seek(0)
+            self.data_fp = data_fp
+    
+    def test_write_custom_info_after_postingline(self):
+        record1 = CustomInfoRecord(key='Foo', value='Bar')
+        record2 = CustomInfoRecord(key='Baz', value='Quuz')
+        self._assemble_transaction_data([record1, record2])
+        self.reader = KneReader(self.header_fp, [self.data_fp])
+        
+        tfile = self.reader.get_file(0)
+        posting_lines = tfile.get_posting_lines()
+        self.assertEqual(1, len(posting_lines))
+        line = posting_lines[0]
+        self.assertEqual(2, len(line.custom_info_records))
+        r1, r2 = line.custom_info_records
+        self.assertEqual(('Foo', 'Bar'), (r1.key, r1.value))
+        self.assertEqual(('Baz', 'Quuz'), (r2.key, r2.value))
+    
