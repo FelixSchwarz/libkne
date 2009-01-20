@@ -50,13 +50,13 @@ class PostingLine(object):
     def _parse_posting_key(self, data, start_index):
         if data[start_index] == 'l':
             start = start_index + 1
-            posting_key, end_index = parse_number(data, start, start+1)
-            posting_key = str(posting_key)
-            assert_true(len(posting_key) in [1, 2])
-            if len(posting_key) == 1:
-                posting_key = "0" + posting_key
-            self.amendment_key = int(posting_key[0]) or None
-            self.tax_key = int(posting_key[1])
+            amendment_key, end_index = parse_number(data, start, start+1)
+            amendment_key = str(amendment_key)
+            assert_true(len(amendment_key) in [1, 2])
+            if len(amendment_key) == 1:
+                amendment_key = "0" + amendment_key
+            self.amendment_key = int(amendment_key[0]) or None
+            self.tax_key = int(amendment_key[1])
             return end_index
         else:
             return start_index - 1

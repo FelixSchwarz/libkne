@@ -66,4 +66,13 @@ class KneReader(object):
     
     def get_number_of_files(self):
         return len(self.files)
+    
+    
+    def get_transaction_files(self):
+        '''Return a list of all data files which contain transaction data.'''
+        transaction_files = []
+        for datafile in self.files:
+            if datafile.contains_transaction_data():
+                transaction_files.append(datafile)
+        return transaction_files
 
