@@ -33,6 +33,7 @@ class PostingLine(object):
         self.base_currency_amount = None    # TODO: Write to binary!
         self.base_currency = None           # TODO: Write to binary!
         self.exchange_rate = None           # TODO: Write to binary!
+        self.reserved_fields = []
         
         self.custom_info_records = []
         
@@ -172,6 +173,31 @@ class PostingLine(object):
         return start_index - 1
     
     
+    def _parse_reserved_fields(self, data, start_index):
+        end_index = start_index - 1
+        reserved = [None] * 7
+        if data[end_index+1] == 'g':
+            start = end_index + 1 + 1
+            reserved[0], end_index = parse_number(data, start, start+11)
+        reserved[1], end_index = parse_optional_string_field(data, '\xb0', 
+                                                             end_index+1, 20)
+        reserved[2], end_index = parse_optional_string_field(data, '\xb1', 
+                                                             end_index+1, 20)
+        reserved[3], end_index = parse_optional_string_field(data, '\xb2', 
+                                                             end_index+1, 20)
+        if data[end_index+1] == 'f':
+            start = end_index + 1 + 1
+            reserved[4], end_index = parse_number(data, start, start+11)
+        if data[end_index+1] == 'p':
+            start = end_index + 1 + 1
+            reserved[5], end_index = parse_number(data, start, start+3)
+        if data[end_index+1] == 'q':
+            start = end_index + 1 + 1
+            reserved[6], end_index = parse_number(data, start, start+12)
+        self.reserved_fields = reserved
+        return end_index
+    
+    
     @classmethod
     def from_binary(cls, binary_data, start_index, metadata):
         data = binary_data[start_index:]
@@ -197,6 +223,7 @@ class PostingLine(object):
         end_index = line._parse_base_currency_amount(data, end_index+1)
         end_index = line._parse_base_currency(data, end_index+1)
         end_index = line._parse_exchange_rate(data, end_index+1)
+        end_index = line._parse_reserved_fields(data, end_index+1)
         assert 'y' == data[end_index + 1], repr(data[end_index + 1:])
         end_index += 1
         return (line, start_index + end_index)
@@ -242,6 +269,16 @@ class PostingLine(object):
         return bin_date
     
     
+    def _write_reserved_fields(self):
+        binary_reserved = ''
+        delimiters = [('g', ''), ('\xb0', '\x1c'), ('\xb1', '\x1c'), 
+                      ('\xb2', '\x1c'), ('f', ''), ('p', ''), ('q', '')]
+        for (value, delimiter) in zip(self.reserved_fields, delimiters):
+            if value != None:
+                binary_reserved += delimiter[0] + str(value) + delimiter[1]
+        return binary_reserved
+    
+    
     def to_binary(self):
         """Return a list of multiple lines containing binary KNE format for this
         posting line."""
@@ -254,21 +291,26 @@ class PostingLine(object):
             bin_line += 'l' + amendment_key + '0'
         assert self.offsetting_account != None
         bin_line += 'a' + str(self.offsetting_account)
-        assert len(self.record_field1) <= 12
-        self._assert_only_valid_characters_for_record_field(self.record_field1)
-        bin_line += '\xbd' + self.record_field1 + '\x1c'
-        assert len(self.record_field2) <= 12
-        self._assert_only_valid_characters_for_record_field(self.record_field2)
-        bin_line += '\xbe' + self.record_field2 + '\x1c'
+        if self.record_field1 != None:
+            assert_true(len(self.record_field1) <= 12)
+            self._assert_only_valid_characters_for_record_field(self.record_field1)
+            bin_line += '\xbd' + self.record_field1 + '\x1c'
+        if self.record_field2 != None:
+            assert_true(len(self.record_field2) <= 12)
+            self._assert_only_valid_characters_for_record_field(self.record_field2)
+            bin_line += '\xbe' + self.record_field2 + '\x1c'
         bin_line += 'd' + self._date_to_binary()
         bin_line += 'e' + str(self.account_number)
-        assert len(self.posting_text) <= 30
-        encoded_text = self._encode_posting_text(self.posting_text)
-        bin_line += '\x1e' + encoded_text + '\x1c'
+        if self.posting_text != None:
+            assert_true(len(self.posting_text) <= 30)
+            encoded_text = self._encode_posting_text(self.posting_text)
+            bin_line += '\x1e' + encoded_text + '\x1c'
         currency_code = self.currency_code_transaction_volume
         assert len(currency_code) <= 3
         assert currency_code.upper() == currency_code
         bin_line += '\xb3' + currency_code + '\x1c'
+        
+        bin_line += self._write_reserved_fields()
         bin_line += 'y'
         
         binary_lines = [bin_line]

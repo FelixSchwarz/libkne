@@ -11,6 +11,10 @@ from postingline import *
 import datev_encoding
 datev_encoding.register()
 
+# reserved fields
+# reserved_4: 'A' in Datenexport Jahresabschlussbuchung
+# 
+
 '''
 Some constants used in the KNE format
 
