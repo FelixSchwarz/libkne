@@ -21,11 +21,18 @@ def _short_date(date):
     return short_date_to_binary(date)
 
 replacement_table_for_non_datev_characters = {
+    # General
+    
     # France
     u'é': 'e', u'è': 'e', u'á': 'a', u'à': 'a', u'î': 'i',
     
     # Turkey
     u'ç': 'c',
+    
+    # KNE ASCII does not know the '~' character. Probably it is used mostly for
+    # URLs where it can be encoded using the hexadecimal ASCII value.
+    u'~': '%7E',
+    
 #    
 #    u'': '', u'': '', u'': '', u'': '', u'': '', u'': '',
 }
