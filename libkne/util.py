@@ -22,7 +22,7 @@ def _short_date(date):
 
 replacement_table_for_non_datev_characters = {
     # France
-    u'é': 'e', u'á': 'a', u'à': 'a', u'î': 'i', 
+    u'é': 'e', u'è': 'e', u'á': 'a', u'à': 'a', u'î': 'i',
     
     # Turkey
     u'ç': 'c',
