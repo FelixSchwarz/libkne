@@ -7,7 +7,7 @@ import StringIO
 import sys
 sys.path.append('/home/fs/workspace/libkne/src')
 
-from libkne import KneWriter, PostingLine
+from libkne import KneWriter, AccountingLine
 
 def _default_config():
     config = {}
@@ -40,7 +40,7 @@ def build_kne_writer():
 
 
 def build_posting_line():
-    line = PostingLine()
+    line = AccountingLine()
     line.transaction_volume = -115
     line.offsetting_account = 100010000
     line.record_field1 = 'Re526100910'

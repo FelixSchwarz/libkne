@@ -7,7 +7,7 @@ import warnings
 from libkne.controlrecord import ControlRecord
 from libkne.custom_info_record import CustomInfoRecord
 from libkne.data_line import DataLine
-from libkne.postingline import PostingLine
+from libkne.accountingline import AccountingLine
 from libkne.util import assert_match, assert_true, parse_short_date, \
     _short_date, parse_number, parse_string, APPLICATION_NUMBER_TRANSACTION_DATA
 
@@ -368,7 +368,7 @@ class DataFile(object):
             # There can be multiple subtotals between the lines so we must 
             # break if we really reached 'client total'
             while self.more_posting_lines(binary_data, start_index):
-                line, end_index = PostingLine.from_binary(binary_data, start_index, metadata)
+                line, end_index = AccountingLine.from_binary(binary_data, start_index, metadata)
                 self.lines.append(line)
                 end_index = self._parse_custom_info_records(binary_data, end_index+1, line)
                 start_index = end_index + 1

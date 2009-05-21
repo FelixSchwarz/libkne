@@ -3,7 +3,7 @@
 from datetime import date
 import unittest
 
-from libkne import PostingLine
+from libkne import AccountingLine
 
 
 
@@ -14,7 +14,7 @@ def get_minimal_metadata():
 
 def build_minimal_postingline():
     metadata = get_minimal_metadata()
-    line = PostingLine(metadata)
+    line = AccountingLine(metadata)
     line.transaction_volume = -115
     line.offsetting_account = 1000
     line.date = date(day=5, month=10, year=2007)
@@ -62,7 +62,7 @@ class TestPostingline(unittest.TestCase):
         binary_line = '-11500a1000d510e8400\xb3EUR\x1c' + binary_reserved + 'y'
         
         parsed_line, end_index = \
-            PostingLine.from_binary(binary_line, 0, get_minimal_metadata())
+            AccountingLine.from_binary(binary_line, 0, get_minimal_metadata())
         self.assertEqual(reserved_fields, parsed_line.reserved_fields)
     
     def test_parse_only_some_reserved_fields(self):
@@ -71,6 +71,6 @@ class TestPostingline(unittest.TestCase):
         binary_line = '-11500a1000d510e8400\xb3EUR\x1c' + binary_reserved + 'y'
         
         parsed_line, end_index = \
-            PostingLine.from_binary(binary_line, 0, get_minimal_metadata())
+            AccountingLine.from_binary(binary_line, 0, get_minimal_metadata())
         self.assertEqual(reserved_fields, parsed_line.reserved_fields)
 

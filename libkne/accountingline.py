@@ -7,9 +7,9 @@ import re
 from libkne.util import assert_true, get_number_of_decimal_places, \
     parse_number, parse_number_field, parse_optional_string_field, parse_string
 
-__all__ = ['PostingLine']
+__all__ = ['AccountingLine']
 
-class PostingLine(object):
+class AccountingLine(object):
     def __init__(self, file_metadata):
         self.file_metadata = file_metadata
         

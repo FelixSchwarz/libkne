@@ -6,7 +6,7 @@ from knereader import *
 from knefilereader import *
 from knefilewriter import *
 from knewriter import *
-from postingline import *
+from accountingline import *
 
 import datev_encoding
 datev_encoding.register()
@@ -68,7 +68,7 @@ Berichtigungsschlüssel        amendment key
 Bewegungsdaten                transaction data
 Buchungsschlüssel             posting key
 Buchungstext                  posting text
-Buchungszeile                 posting line
+Buchungszeile                 accounting line
 Datenträgerkennsatz           data carrier header
 Datenträgernummer             data carrier number
 Debitor                       debtor

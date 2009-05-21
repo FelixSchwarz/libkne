@@ -8,7 +8,7 @@ import StringIO
 import unittest
 
 
-from libkne import CustomInfoRecord, DataLine, KneWriter, KneReader, PostingLine
+from libkne import CustomInfoRecord, DataLine, KneWriter, KneReader, AccountingLine
 
 current_year2k = str(date.today().year)[-2:]
 
@@ -42,7 +42,7 @@ def _build_kne_writer(config=None, header_fp=None):
 
 
 def _build_posting_line(**kwargs):
-    line = PostingLine({})
+    line = AccountingLine({})
     line.transaction_volume = -115
     line.offsetting_account = 100010000
     line.record_field1 = 'Re526100910'
@@ -82,7 +82,7 @@ def _default_binary_posting_line(with_ammount=True):
 
 
 
-class TestPostingLine(unittest.TestCase):
+class TestAccountingLine(unittest.TestCase):
     
     def setUp(self):
         binary_line = _default_binary_posting_line(with_ammount=False)
@@ -392,7 +392,7 @@ class TestKneWritingTransactionDataFromDifferentFinancialYears(unittest.TestCase
 
 
 
-class TestKneWriteAndParsePostingLinesWithCustomInfo(unittest.TestCase):
+class TestKneWriteAndParseAccountingLinesWithCustomInfo(unittest.TestCase):
     def setUp(self):
         self.header_fp = StringIO.StringIO()
         self.writer, self.data_fps = _build_kne_writer(header_fp=self.header_fp)
