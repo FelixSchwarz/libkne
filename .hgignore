@@ -1,5 +1,9 @@
 real_data
 .svn
+build
+dist
 
 syntax: glob
 *.pyc
+*.egg-info
+
