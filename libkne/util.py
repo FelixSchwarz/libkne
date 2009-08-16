@@ -29,6 +29,9 @@ replacement_table_for_non_datev_characters = {
     # Turkey
     u'ç': 'c',
     
+    # Polish, Czech, Slovak
+    u'ó': 'o',
+    
     # KNE ASCII does not know the '~' character. Probably it is used mostly for
     # URLs where it can be encoded using the hexadecimal ASCII value.
     u'~': '%7E',
