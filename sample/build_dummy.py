@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+# The source code contained in this file is licensed under the MIT license.
+# See LICENSE.txt in the main project directory, for more information.
+# For the exact contribution history, see the git revision log.
 
 import datetime
 import StringIO
-
-import sys
-sys.path.append('/home/fs/workspace/libkne/src')
 
 from libkne import KneWriter, AccountingLine
 
@@ -63,8 +63,6 @@ def _flush_to_disk(header_fp, data_fp):
     ed.write(data_fp.read())
     ed.close()
 
-    
-    
 
 if __name__ == '__main__':
     writer = build_kne_writer()
@@ -75,5 +73,4 @@ if __name__ == '__main__':
     
     data_fp = data_files[0]
     _flush_to_disk(writer.header_fp, data_fp)
-    
-    
+
