@@ -1,4 +1,7 @@
 # -*- coding: UTF-8 -*-
+# The source code contained in this file is licensed under the MIT license.
+# See LICENSE.txt in the main project directory, for more information.
+# For the exact contribution history, see the git revision log.
 
 from libkne.util import APPLICATION_NUMBER_TRANSACTION_DATA, \
     APPLICATION_NUMBER_MASTER_DATA, assert_match, parse_short_date, \

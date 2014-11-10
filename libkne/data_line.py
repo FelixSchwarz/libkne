@@ -1,4 +1,7 @@
 # -*- coding: UTF-8 -*-
+# The source code contained in this file is licensed under the MIT license.
+# See LICENSE.txt in the main project directory, for more information.
+# For the exact contribution history, see the git revision log.
 
 from util import parse_string_field, parse_optional_number_field, \
     parse_number_field, replace_unencodable_characters

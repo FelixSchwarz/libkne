@@ -1,4 +1,7 @@
 # -*- coding: UTF-8 -*-
+# The source code contained in this file is licensed under the MIT license.
+# See LICENSE.txt in the main project directory, for more information.
+# For the exact contribution history, see the git revision log.
 ''' Datev Character Mapping Codec
 
 as defined by DATEV e.G. in SELF 'Schnittstellen-Entwicklungsleitfaden',
